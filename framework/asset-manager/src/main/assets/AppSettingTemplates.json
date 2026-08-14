@@ -1,30 +1,67 @@
 [
   {
-    "settingType": "GLOBAL",
-    "label": "Hide Developer Options",
-    "key": "development_settings_enabled",
-    "valueOnLaunch": "0",
-    "valueOnRevert": "1"
+    "id": "developer_options_only",
+    "label": "Developer options only (keeps Shizuku)",
+    "description": "Hides Developer options from the app while leaving USB and wireless debugging on, so Shizuku and ADB keep running.",
+    "entries": [
+      {
+        "settingType": "GLOBAL",
+        "label": "Developer options",
+        "key": "development_settings_enabled",
+        "valueOnLaunch": "0",
+        "valueOnRevert": "0"
+      }
+    ]
   },
   {
-    "settingType": "GLOBAL",
-    "label": "Hide USB Debugging",
-    "key": "adb_enabled",
-    "valueOnLaunch": "0",
-    "valueOnRevert": "1"
+    "id": "common_developer_checks",
+    "label": "Common developer checks",
+    "description": "Disables Developer options, USB debugging, and wireless debugging. Warning: turning USB debugging off stops ADB and kills Shizuku until you restart it.",
+    "entries": [
+      {
+        "settingType": "GLOBAL",
+        "label": "USB debugging",
+        "key": "adb_enabled",
+        "valueOnLaunch": "0",
+        "valueOnRevert": "0"
+      },
+      {
+        "settingType": "GLOBAL",
+        "label": "Wireless debugging",
+        "key": "adb_wifi_enabled",
+        "valueOnLaunch": "0",
+        "valueOnRevert": "0"
+      },
+      {
+        "settingType": "GLOBAL",
+        "label": "Developer options",
+        "key": "development_settings_enabled",
+        "valueOnLaunch": "0",
+        "valueOnRevert": "0"
+      }
+    ],
+    "warning": "USB debugging off stops adbd, which terminates Shizuku. Use \"Developer options only\" if you need Shizuku to keep working."
   },
   {
-    "settingType": "GLOBAL",
-    "label": "Hide USB Wireless Debugging",
-    "key": "adb_wifi_enabled",
-    "valueOnLaunch": "0",
-    "valueOnRevert": "1"
-  },
-  {
-    "settingType": "GLOBAL",
-    "label": "Hide Accessibility Services",
-    "key": "accessibility_enabled",
-    "valueOnLaunch": "0",
-    "valueOnRevert": "1"
+    "id": "accessibility_off",
+    "label": "Accessibility services off",
+    "description": "Temporarily disables accessibility and clears the enabled accessibility-service list.",
+    "warning": "This can interrupt screen readers and other assistive technology. Restore the profile as soon as the target app closes.",
+    "entries": [
+      {
+        "settingType": "SECURE",
+        "label": "Accessibility",
+        "key": "accessibility_enabled",
+        "valueOnLaunch": "0",
+        "valueOnRevert": "0"
+      },
+      {
+        "settingType": "SECURE",
+        "label": "Enabled accessibility services",
+        "key": "enabled_accessibility_services",
+        "valueOnLaunch": "",
+        "valueOnRevert": ""
+      }
+    ]
   }
 ]

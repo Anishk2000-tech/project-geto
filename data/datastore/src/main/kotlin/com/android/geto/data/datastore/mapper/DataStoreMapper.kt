@@ -17,12 +17,37 @@
  */
 package com.android.geto.data.datastore.mapper
 
+import com.android.geto.data.datastore.proto.GrantMethodProto
 import com.android.geto.data.datastore.proto.SortLauncherAppsActivityInfoProto
 import com.android.geto.data.datastore.proto.SortOrderLauncherAppsActivityInfoProto
 import com.android.geto.data.datastore.proto.ThemeProto
+import com.android.geto.domain.model.GrantMethod
 import com.android.geto.domain.model.SortLauncherAppsActivityInfo
 import com.android.geto.domain.model.SortOrderLauncherAppsActivityInfo
 import com.android.geto.domain.model.Theme
+
+internal fun GrantMethodProto.asGrantMethod(): GrantMethod = when (this) {
+    GrantMethodProto.GRANT_METHOD_UNSPECIFIED,
+    GrantMethodProto.GRANT_METHOD_ADB,
+    GrantMethodProto.UNRECOGNIZED,
+    -> {
+        GrantMethod.ADB
+    }
+
+    GrantMethodProto.GRANT_METHOD_SHIZUKU -> {
+        GrantMethod.SHIZUKU
+    }
+}
+
+internal fun GrantMethod.asGrantMethodProto(): GrantMethodProto = when (this) {
+    GrantMethod.ADB -> {
+        GrantMethodProto.GRANT_METHOD_ADB
+    }
+
+    GrantMethod.SHIZUKU -> {
+        GrantMethodProto.GRANT_METHOD_SHIZUKU
+    }
+}
 
 internal fun ThemeProto.asTheme(): Theme = when (this) {
     ThemeProto.THEME_UNSPECIFIED,

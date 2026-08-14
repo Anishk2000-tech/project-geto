@@ -20,37 +20,8 @@ package com.android.geto.domain.model
 data class LauncherAppsActivityInfo(
     val componentName: String,
     val packageName: String,
-    val activityIcon: ByteArray?,
     val activityLabel: String,
     val firstInstallTime: Long,
     val lastUpdateTime: Long,
     val isSystem: Boolean,
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as LauncherAppsActivityInfo
-
-        if (firstInstallTime != other.firstInstallTime) return false
-        if (lastUpdateTime != other.lastUpdateTime) return false
-        if (isSystem != other.isSystem) return false
-        if (componentName != other.componentName) return false
-        if (packageName != other.packageName) return false
-        if (!activityIcon.contentEquals(other.activityIcon)) return false
-        if (activityLabel != other.activityLabel) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = firstInstallTime.hashCode()
-        result = 31 * result + lastUpdateTime.hashCode()
-        result = 31 * result + isSystem.hashCode()
-        result = 31 * result + componentName.hashCode()
-        result = 31 * result + packageName.hashCode()
-        result = 31 * result + (activityIcon?.contentHashCode() ?: 0)
-        result = 31 * result + activityLabel.hashCode()
-        return result
-    }
-}
+)

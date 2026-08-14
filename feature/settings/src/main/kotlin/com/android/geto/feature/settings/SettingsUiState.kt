@@ -21,5 +21,8 @@ import com.android.geto.domain.model.UserData
 
 sealed interface SettingsUiState {
     data object Loading : SettingsUiState
+
+    data class Error(val message: String?) : SettingsUiState
+
     data class Success(val userData: UserData) : SettingsUiState
 }

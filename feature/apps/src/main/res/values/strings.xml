@@ -19,6 +19,8 @@
     <string name="search">Search</string>
     <string name="sort">Sort</string>
     <string name="sort_order">Sort Order</string>
+    <string name="sort_by">Sort by</string>
+    <string name="order">Order</string>
     <string name="name">Name</string>
     <string name="update_time">Update</string>
     <string name="install_time">Install</string>
@@ -26,4 +28,19 @@
     <string name="descending">Descending</string>
     <string name="show_system">Show System</string>
     <string name="show_system_applications">Show system applications</string>
+    <string name="sort_and_filter">Sort and filter</string>
+    <string name="apps_load_failed">Couldn\'t load installed apps</string>
+    <string name="apps_refresh_failed">Couldn\'t refresh the app list</string>
+    <string name="showing_previous_apps">Showing the last available list</string>
+    <string name="retry">Retry</string>
+    <string name="no_apps">No apps to show</string>
+    <string name="no_search_results">No matching apps</string>
+    <string name="tag_active">ACTIVE</string>
+    <string name="tag_active_description">Protected right now</string>
+    <plurals name="settings_configured">
+        <item quantity="one">%1$d setting configured</item>
+        <item quantity="other">%1$d settings configured</item>
+    </plurals>
+    <string name="tag_armed">ON</string>
+    <string name="tag_armed_description">Applies when you open this app</string>
 </resources>

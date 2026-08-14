@@ -20,7 +20,29 @@ package com.android.geto.feature.apps
 import com.android.geto.domain.model.LauncherAppsActivityInfoData
 
 sealed interface AppsUiState {
-    data class Success(val launcherAppsActivityInfoData: LauncherAppsActivityInfoData) : AppsUiState
+    data class Success(
+        val launcherAppsActivityInfoData: LauncherAppsActivityInfoData,
+        val searchQuery: String,
+        val appTags: AppTags = AppTags(),
+    ) : AppsUiState
+
+    data class Error(
+        val previousData: LauncherAppsActivityInfoData?,
+        val searchQuery: String,
+        val appTags: AppTags = AppTags(),
+    ) : AppsUiState
 
     data object Loading : AppsUiState
 }
+
+/**
+ * What to show beside each app in the list: how many Geto settings it has saved, and whether it is
+ * protected right now. Keyed by component name, matching the grid's own key.
+ */
+data class AppTags(
+    val settingCountByComponentName: Map<String, Int> = emptyMap(),
+    /** Set up to apply when opened, whether or not it is applied at this moment. */
+    val armedComponentNames: Set<String> = emptySet(),
+    /** Applied right now, i.e. this app is in the foreground. */
+    val protectedComponentNames: Set<String> = emptySet(),
+)

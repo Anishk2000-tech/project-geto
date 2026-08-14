@@ -18,6 +18,7 @@
 package com.android.geto.data.repository
 
 import com.android.geto.data.datastore.UserPreferencesDataSource
+import com.android.geto.domain.model.GrantMethod
 import com.android.geto.domain.model.SortLauncherAppsActivityInfo
 import com.android.geto.domain.model.SortOrderLauncherAppsActivityInfo
 import com.android.geto.domain.model.Theme
@@ -30,6 +31,9 @@ class DefaultUserDataRepository @Inject constructor(
     private val userPreferencesDataSource: UserPreferencesDataSource,
 ) : UserDataRepository {
     override val userData: Flow<UserData> = userPreferencesDataSource.userData
+
+    override val preferencesWereReset: Flow<Boolean> =
+        userPreferencesDataSource.preferencesWereReset
 
     override suspend fun updateTheme(theme: Theme) {
         userPreferencesDataSource.updateTheme(theme = theme)
@@ -51,5 +55,29 @@ class DefaultUserDataRepository @Inject constructor(
 
     override suspend fun updateShowSystem(showSystem: Boolean) {
         userPreferencesDataSource.updateShowSystem(showSystem = showSystem)
+    }
+
+    override suspend fun updateAutoRestartProtection(autoRestartProtection: Boolean) {
+        userPreferencesDataSource.updateAutoRestartProtection(
+            autoRestartProtection = autoRestartProtection,
+        )
+    }
+
+    override suspend fun updateGrantMethod(grantMethod: GrantMethod) {
+        userPreferencesDataSource.updateGrantMethod(grantMethod = grantMethod)
+    }
+
+    override suspend fun updateProtectionPausedUntil(protectionPausedUntilMillis: Long) {
+        userPreferencesDataSource.updateProtectionPausedUntil(
+            protectionPausedUntilMillis = protectionPausedUntilMillis,
+        )
+    }
+
+    override suspend fun resetUserPreferences() {
+        userPreferencesDataSource.resetUserPreferences()
+    }
+
+    override fun acknowledgePreferencesReset() {
+        userPreferencesDataSource.acknowledgePreferencesReset()
     }
 }

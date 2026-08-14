@@ -19,20 +19,39 @@ package com.android.geto.activity.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.geto.domain.model.UserData
 import com.android.geto.domain.repository.UserDataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainActivityViewModel @Inject constructor(
-    userDataRepository: UserDataRepository,
+    private val userDataRepository: UserDataRepository,
 ) : ViewModel() {
-    val uiState = userDataRepository.userData.map(MainActivityUiState::Success).stateIn(
+    private val retryTrigger = MutableStateFlow(0)
+
+    val uiState = retryTrigger.flatMapLatest {
+        userDataRepository.userData
+            .map<UserData, MainActivityUiState>(MainActivityUiState::Success)
+            .onStart { emit(MainActivityUiState.Loading) }
+            .catch { throwable -> emit(MainActivityUiState.Error(throwable.message)) }
+    }.stateIn(
         scope = viewModelScope,
         initialValue = MainActivityUiState.Loading,
         started = SharingStarted.WhileSubscribed(5_000),
     )
+
+    fun retry() {
+        retryTrigger.update(Int::inc)
+    }
 }

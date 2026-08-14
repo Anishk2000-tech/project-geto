@@ -1,0 +1,300 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 11,
+    "identityHash": "9a86db749d63091eb594ad194e6e7e65",
+    "entities": [
+      {
+        "tableName": "AppSettingEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `enabled` INTEGER NOT NULL, `settingType` TEXT NOT NULL, `componentName` TEXT NOT NULL, `label` TEXT NOT NULL, `key` TEXT NOT NULL, `valueOnLaunch` TEXT NOT NULL, `valueOnRevert` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "settingType",
+            "columnName": "settingType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "componentName",
+            "columnName": "componentName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valueOnLaunch",
+            "columnName": "valueOnLaunch",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valueOnRevert",
+            "columnName": "valueOnRevert",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "ArmedProfileEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`componentName` TEXT NOT NULL, `armedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`componentName`))",
+        "fields": [
+          {
+            "fieldPath": "componentName",
+            "columnName": "componentName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "armedAtMillis",
+            "columnName": "armedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "componentName"
+          ]
+        }
+      },
+      {
+        "tableName": "ProtectedKeyEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`settingType` TEXT NOT NULL, `key` TEXT NOT NULL, `originalValue` TEXT, `enforcedValue` TEXT NOT NULL, `claimedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`settingType`, `key`))",
+        "fields": [
+          {
+            "fieldPath": "settingType",
+            "columnName": "settingType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalValue",
+            "columnName": "originalValue",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "enforcedValue",
+            "columnName": "enforcedValue",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "claimedAtMillis",
+            "columnName": "claimedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "settingType",
+            "key"
+          ]
+        }
+      },
+      {
+        "tableName": "ProtectionSessionEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`token` TEXT NOT NULL, `componentName` TEXT NOT NULL, `mode` TEXT NOT NULL, `status` TEXT NOT NULL, `createdAtMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, `lastError` TEXT, `pausedUntilMillis` INTEGER NOT NULL, PRIMARY KEY(`token`))",
+        "fields": [
+          {
+            "fieldPath": "token",
+            "columnName": "token",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "componentName",
+            "columnName": "componentName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pausedUntilMillis",
+            "columnName": "pausedUntilMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "token"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ProtectionSessionEntity_componentName",
+            "unique": true,
+            "columnNames": [
+              "componentName"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_ProtectionSessionEntity_componentName` ON `${TABLE_NAME}` (`componentName`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ProtectionValueEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionToken` TEXT NOT NULL, `settingType` TEXT NOT NULL, `key` TEXT NOT NULL, `protectedValue` TEXT NOT NULL, `writeOrder` INTEGER NOT NULL, PRIMARY KEY(`sessionToken`, `settingType`, `key`), FOREIGN KEY(`sessionToken`) REFERENCES `ProtectionSessionEntity`(`token`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`settingType`, `key`) REFERENCES `ProtectedKeyEntity`(`settingType`, `key`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "sessionToken",
+            "columnName": "sessionToken",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "settingType",
+            "columnName": "settingType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "protectedValue",
+            "columnName": "protectedValue",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "writeOrder",
+            "columnName": "writeOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "sessionToken",
+            "settingType",
+            "key"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ProtectionValueEntity_sessionToken",
+            "unique": false,
+            "columnNames": [
+              "sessionToken"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ProtectionValueEntity_sessionToken` ON `${TABLE_NAME}` (`sessionToken`)"
+          },
+          {
+            "name": "index_ProtectionValueEntity_settingType_key",
+            "unique": false,
+            "columnNames": [
+              "settingType",
+              "key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ProtectionValueEntity_settingType_key` ON `${TABLE_NAME}` (`settingType`, `key`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ProtectionSessionEntity",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sessionToken"
+            ],
+            "referencedColumns": [
+              "token"
+            ]
+          },
+          {
+            "table": "ProtectedKeyEntity",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "settingType",
+              "key"
+            ],
+            "referencedColumns": [
+              "settingType",
+              "key"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9a86db749d63091eb594ad194e6e7e65')"
+    ]
+  }
+}

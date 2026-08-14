@@ -20,17 +20,18 @@ package com.android.geto.activity.shortcut
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.geto.domain.framework.PackageManagerWrapper
-import com.android.geto.domain.usecase.ApplyAppSettingsUseCase
+import com.android.geto.domain.model.ProtectionMode
+import com.android.geto.domain.usecase.ProtectionController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ShortcutActivityViewModel @Inject constructor(
-    private val applyAppSettingsUseCase: ApplyAppSettingsUseCase,
+    private val protectionController: ProtectionController,
     private val packageManagerWrapper: PackageManagerWrapper,
 ) : ViewModel() {
     private val _shortcutActivityUiState =
@@ -39,12 +40,22 @@ class ShortcutActivityViewModel @Inject constructor(
 
     fun applyAppSettings(componentName: String) {
         viewModelScope.launch {
-            _shortcutActivityUiState.update {
+            _shortcutActivityUiState.value = ShortcutActivityUiState.Loading
+            _shortcutActivityUiState.value = try {
                 ShortcutActivityUiState.Success(
-                    appSettingsResult = applyAppSettingsUseCase(componentName = componentName),
+                    protectionResult = protectionController.enable(
+                        componentName = componentName,
+                        mode = ProtectionMode.ONE_SHOT,
+                    ),
                     applicationIcon = packageManagerWrapper.getActivityIcon(componentName = componentName),
                 )
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: RuntimeException) {
+                ShortcutActivityUiState.Error
             }
         }
     }
+
+    suspend fun restore(sessionToken: String) = protectionController.restore(sessionToken)
 }

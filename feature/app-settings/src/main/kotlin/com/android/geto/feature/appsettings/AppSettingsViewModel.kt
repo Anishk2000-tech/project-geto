@@ -27,30 +27,36 @@ import com.android.geto.domain.framework.ShortcutManagerCompatWrapper
 import com.android.geto.domain.model.AddAppSettingResult
 import com.android.geto.domain.model.AppSetting
 import com.android.geto.domain.model.AppSettingTemplate
-import com.android.geto.domain.model.AppSettingsResult
 import com.android.geto.domain.model.GetPinShortcutResult
+import com.android.geto.domain.model.ProtectionMode
+import com.android.geto.domain.model.ProtectionResult
+import com.android.geto.domain.model.ProtectionState
 import com.android.geto.domain.model.RequestPinShortcutResult
 import com.android.geto.domain.model.SecureSetting
 import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.model.UpdatePinShortcutResult
 import com.android.geto.domain.repository.AppSettingsRepository
+import com.android.geto.domain.usecase.AddAppSettingTemplateUseCase
 import com.android.geto.domain.usecase.AddAppSettingUseCase
-import com.android.geto.domain.usecase.ApplyAppSettingsUseCase
 import com.android.geto.domain.usecase.GetPinShortcutUseCase
 import com.android.geto.domain.usecase.GetSecureSettingsByNameUseCase
+import com.android.geto.domain.usecase.ProtectionController
 import com.android.geto.domain.usecase.RequestPinShortcutUseCase
-import com.android.geto.domain.usecase.RevertAppSettingsUseCase
 import com.android.geto.domain.usecase.UpdatePinShortcutUseCase
 import com.android.geto.feature.appsettings.navigation.AppSettingsRouteData
+import com.android.geto.service.ProtectionService
+import com.android.geto.service.ProtectionServiceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,15 +64,16 @@ class AppSettingsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val appSettingsRepository: AppSettingsRepository,
     private val packageManagerWrapper: PackageManagerWrapper,
-    private val applyAppSettingsUseCase: ApplyAppSettingsUseCase,
-    private val revertAppSettingsUseCase: RevertAppSettingsUseCase,
+    private val protectionController: ProtectionController,
     private val requestPinShortcutUseCase: RequestPinShortcutUseCase,
     private val addAppSettingUseCase: AddAppSettingUseCase,
+    private val addAppSettingTemplateUseCase: AddAppSettingTemplateUseCase,
     private val assetManagerWrapper: AssetManagerWrapper,
     private val getSecureSettingsByNameUseCase: GetSecureSettingsByNameUseCase,
     private val getPinShortcutUseCase: GetPinShortcutUseCase,
     private val shortcutManagerCompatWrapper: ShortcutManagerCompatWrapper,
     private val updatePinShortcutUseCase: UpdatePinShortcutUseCase,
+    private val protectionServiceManager: ProtectionServiceManager,
 ) : ViewModel() {
     private val appSettingsRouteData = savedStateHandle.toRoute<AppSettingsRouteData>()
 
@@ -87,11 +94,21 @@ class AppSettingsViewModel @Inject constructor(
     private val _addAppSettingsResult = MutableStateFlow<AddAppSettingResult?>(null)
     val addAppSettingsResult = _addAppSettingsResult.asStateFlow()
 
-    private val _applyAppSettingsResult = MutableStateFlow<AppSettingsResult?>(null)
-    val applyAppSettingsResult = _applyAppSettingsResult.asStateFlow()
+    private val _protectionActionResult = MutableStateFlow<ProtectionActionResult?>(null)
+    val protectionActionResult = _protectionActionResult.asStateFlow()
+    private val protectionActionInProgress = AtomicBoolean(false)
 
-    private val _revertAppSettingsResult = MutableStateFlow<AppSettingsResult?>(null)
-    val revertAppSettingsResult = _revertAppSettingsResult.asStateFlow()
+    val protectionState = protectionController.state.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ProtectionState.Empty,
+    )
+
+    val isProtectionServiceRunning = ProtectionService.isRunning.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false,
+    )
 
     private val _requestPinShortcutResult = MutableStateFlow<RequestPinShortcutResult?>(null)
     val requestPinShortcutResult = _requestPinShortcutResult.asStateFlow()
@@ -119,10 +136,76 @@ class AppSettingsViewModel @Inject constructor(
     private val _updatePinShortcutResult = MutableStateFlow<UpdatePinShortcutResult?>(null)
     val updatePinShortcutResult = _updatePinShortcutResult.asStateFlow()
 
-    fun applyAppSettings() {
-        viewModelScope.launch {
-            _applyAppSettingsResult.update { applyAppSettingsUseCase(componentName = componentName) }
+    /**
+     * Applies the profile and only then launches the app, so it cannot read a setting before the new
+     * value exists. Launching from the home screen has no such guarantee.
+     *
+     * An armed app is applied in [ProtectionMode.FOREGROUND] rather than [ProtectionMode.ONE_SHOT]:
+     * the coordinator is about to see this app come to the foreground and claim it, and a one-shot
+     * session it could not adopt used to leave the app stuck needing recovery.
+     */
+    fun launchOnce() {
+        launchProtectionAction(ProtectionAction.LAUNCH_ONCE) {
+            val armed = componentName in protectionController.armedComponentNames.first()
+            val mode = if (armed) ProtectionMode.FOREGROUND else ProtectionMode.ONE_SHOT
+            protectionController.enable(componentName, mode)
         }
+    }
+
+    val isArmed = protectionController.armedComponentNames
+        .map { componentName in it }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false,
+        )
+
+    /**
+     * Arms or disarms the profile. Arming no longer writes anything: the settings are applied when the
+     * app actually comes to the foreground and put back when it leaves.
+     */
+    fun setForegroundProtection(enabled: Boolean) {
+        viewModelScope.launch {
+            if (enabled) {
+                protectionController.armProfile(componentName)
+            } else {
+                protectionController.disarmProfile(componentName)
+            }
+        }
+    }
+
+    fun restoreProtection(sessionToken: String? = null) {
+        launchProtectionAction(ProtectionAction.RESTORE) {
+            sessionToken?.let { protectionController.restore(it) }
+                ?: ProtectionResult.NoActiveProtection
+        }
+    }
+
+    private fun launchProtectionAction(
+        action: ProtectionAction,
+        operation: suspend () -> ProtectionResult,
+    ) {
+        if (!protectionActionInProgress.compareAndSet(false, true)) return
+
+        viewModelScope.launch {
+            try {
+                val result = operation()
+                val app = (result as? ProtectionResult.Success)?.app
+                if (app?.mode == ProtectionMode.FOREGROUND) {
+                    protectionServiceManager.onProtectionEnabled()
+                }
+                _protectionActionResult.value = ProtectionActionResult(
+                    action = action,
+                    result = result,
+                )
+            } finally {
+                protectionActionInProgress.set(false)
+            }
+        }
+    }
+
+    fun resumeProtection() {
+        protectionServiceManager.onProtectionEnabled()
     }
 
     fun checkAppSetting(appSetting: AppSetting) {
@@ -145,15 +228,20 @@ class AppSettingsViewModel @Inject constructor(
         }
     }
 
-    fun getActivityIcon() {
+    fun addAppSettingTemplate(appSettingTemplate: AppSettingTemplate) {
         viewModelScope.launch {
-            _activityIcon.update { packageManagerWrapper.getActivityIcon(componentName = componentName) }
+            _addAppSettingsResult.update {
+                addAppSettingTemplateUseCase(
+                    componentName = componentName,
+                    template = appSettingTemplate,
+                )
+            }
         }
     }
 
-    fun revertAppSettings() {
+    fun getActivityIcon() {
         viewModelScope.launch {
-            _revertAppSettingsResult.update { revertAppSettingsUseCase(componentName = componentName) }
+            _activityIcon.update { packageManagerWrapper.getActivityIcon(componentName = componentName) }
         }
     }
 
@@ -220,16 +308,12 @@ class AppSettingsViewModel @Inject constructor(
         }
     }
 
-    fun resetApplyAppSettingsResult() {
-        _applyAppSettingsResult.update { null }
+    fun resetProtectionActionResult() {
+        _protectionActionResult.value = null
     }
 
     fun resetRequestPinShortcutResult() {
         _requestPinShortcutResult.update { null }
-    }
-
-    fun resetRevertAppSettingsResult() {
-        _revertAppSettingsResult.update { null }
     }
 
     fun resetAddAppSettingResult() {
@@ -244,3 +328,14 @@ class AppSettingsViewModel @Inject constructor(
         _updatePinShortcutResult.update { null }
     }
 }
+
+enum class ProtectionAction {
+    LAUNCH_ONCE,
+    ENABLE_PERSISTENT,
+    RESTORE,
+}
+
+data class ProtectionActionResult(
+    val action: ProtectionAction,
+    val result: ProtectionResult,
+)

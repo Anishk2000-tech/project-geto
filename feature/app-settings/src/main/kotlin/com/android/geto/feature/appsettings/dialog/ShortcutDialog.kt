@@ -35,7 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,13 +59,13 @@ internal fun RequestPinShortcutDialog(
         longLabel: String,
     ) -> Unit,
 ) {
-    var shortLabel by remember { mutableStateOf("") }
+    var shortLabel by rememberSaveable { mutableStateOf("") }
 
-    var showShortLabelError by remember { mutableStateOf(false) }
+    var showShortLabelError by rememberSaveable { mutableStateOf(false) }
 
-    var longLabel by remember { mutableStateOf("") }
+    var longLabel by rememberSaveable { mutableStateOf("") }
 
-    var showLongLabelError by remember { mutableStateOf(false) }
+    var showLongLabelError by rememberSaveable { mutableStateOf(false) }
 
     DialogContainer(
         modifier = modifier.verticalScroll(rememberScrollState()),
@@ -89,7 +89,7 @@ internal fun RequestPinShortcutDialog(
                     .size(50.dp)
                     .align(Alignment.CenterHorizontally),
                 model = icon,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.app_icon),
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -143,13 +143,13 @@ internal fun UpdatePinShortcutDialog(
         longLabel: String,
     ) -> Unit,
 ) {
-    var shortLabel by remember { mutableStateOf(getoShortcutInfoCompat.shortLabel) }
+    var shortLabel by rememberSaveable { mutableStateOf(getoShortcutInfoCompat.shortLabel) }
 
-    var showShortLabelError by remember { mutableStateOf(false) }
+    var showShortLabelError by rememberSaveable { mutableStateOf(false) }
 
-    var longLabel by remember { mutableStateOf(getoShortcutInfoCompat.longLabel) }
+    var longLabel by rememberSaveable { mutableStateOf(getoShortcutInfoCompat.longLabel) }
 
-    var showLongLabelError by remember { mutableStateOf(false) }
+    var showLongLabelError by rememberSaveable { mutableStateOf(false) }
 
     DialogContainer(
         modifier = modifier.verticalScroll(rememberScrollState()),
@@ -173,7 +173,7 @@ internal fun UpdatePinShortcutDialog(
                     .size(50.dp)
                     .align(Alignment.CenterHorizontally),
                 model = icon,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.app_icon),
             )
 
             Spacer(modifier = Modifier.height(10.dp))

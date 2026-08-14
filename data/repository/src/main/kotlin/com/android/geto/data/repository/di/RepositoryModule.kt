@@ -18,8 +18,10 @@
 package com.android.geto.data.repository.di
 
 import com.android.geto.data.repository.DefaultAppSettingsRepository
+import com.android.geto.data.repository.DefaultProtectionRepository
 import com.android.geto.data.repository.DefaultUserDataRepository
 import com.android.geto.domain.repository.AppSettingsRepository
+import com.android.geto.domain.repository.ProtectionRepository
 import com.android.geto.domain.repository.UserDataRepository
 import dagger.Binds
 import dagger.Module
@@ -34,6 +36,10 @@ interface RepositoryModule {
     @Binds
     @Singleton
     fun appSettingsRepository(impl: DefaultAppSettingsRepository): AppSettingsRepository
+
+    @Binds
+    @Singleton
+    fun protectionRepository(impl: DefaultProtectionRepository): ProtectionRepository
 
     @Binds
     @Singleton

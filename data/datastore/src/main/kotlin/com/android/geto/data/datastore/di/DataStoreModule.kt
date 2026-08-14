@@ -20,8 +20,10 @@ package com.android.geto.data.datastore.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStoreFile
 import com.android.geto.common.ApplicationScope
+import com.android.geto.data.datastore.UserPreferencesRecoveryTracker
 import com.android.geto.data.datastore.UserPreferencesSerializer
 import com.android.geto.data.datastore.proto.UserPreferences
 import com.android.geto.domain.common.dispatcher.Dispatcher
@@ -46,9 +48,14 @@ object DataStoreModule {
         @Dispatcher(IO) ioDispatcher: CoroutineDispatcher,
         @ApplicationScope scope: CoroutineScope,
         userPreferencesSerializer: UserPreferencesSerializer,
+        recoveryTracker: UserPreferencesRecoveryTracker,
     ): DataStore<UserPreferences> = DataStoreFactory.create(
         serializer = userPreferencesSerializer,
         scope = CoroutineScope(scope.coroutineContext + ioDispatcher),
+        corruptionHandler = ReplaceFileCorruptionHandler {
+            recoveryTracker.recordRecovery()
+            userPreferencesSerializer.defaultValue
+        },
     ) {
         context.dataStoreFile("user_preferences.pb")
     }

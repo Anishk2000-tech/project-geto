@@ -38,6 +38,10 @@ class DefaultAppSettingsRepository @Inject constructor(private val appSettingsDa
         appSettingsDao.upsertAppSettingEntity(entity = appSetting.asEntity())
     }
 
+    override suspend fun upsertAppSettings(appSettings: List<AppSetting>) {
+        appSettingsDao.upsertAppSettingEntities(appSettings.map { appSetting -> appSetting.asEntity() })
+    }
+
     override suspend fun deleteAppSetting(appSetting: AppSetting) {
         appSettingsDao.deleteAppSettingEntity(entity = appSetting.asEntity())
     }

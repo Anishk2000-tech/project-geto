@@ -21,10 +21,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.android.geto.common.ApplicationScope
+import com.android.geto.domain.model.AppSettingsResult
+import com.android.geto.domain.model.ProtectionResult
+import com.android.geto.domain.usecase.ProtectionController
 import com.android.geto.domain.usecase.RevertAppSettingsUseCase
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_COMPONENT_NAME
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_NOTIFICATION_ID
+import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_SESSION_TOKEN
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -38,20 +42,37 @@ class RevertSettingsBroadcastReceiver @Inject constructor() : BroadcastReceiver(
     lateinit var appScope: CoroutineScope
 
     @Inject
+    lateinit var protectionController: ProtectionController
+
+    @Inject
     lateinit var revertAppSettingsUseCase: RevertAppSettingsUseCase
 
     @Inject
     lateinit var notificationManagerWrapper: AndroidNotificationManagerWrapper
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        val componentName = intent?.extras?.getString(NOTIFICATION_EXTRA_COMPONENT_NAME) ?: return
-
-        val notificationId = intent.extras?.getInt(NOTIFICATION_EXTRA_NOTIFICATION_ID) ?: return
+        val notificationId = intent?.extras?.getInt(NOTIFICATION_EXTRA_NOTIFICATION_ID) ?: return
+        val sessionToken = intent.extras?.getString(NOTIFICATION_EXTRA_SESSION_TOKEN)
+        val componentName = intent.extras?.getString(NOTIFICATION_EXTRA_COMPONENT_NAME)
+        if (sessionToken == null && componentName == null) return
+        val pendingResult = goAsync()
 
         appScope.launch {
-            revertAppSettingsUseCase(componentName = componentName)
-
-            notificationManagerWrapper.cancel(notificationId)
+            try {
+                val restored = if (sessionToken != null) {
+                    protectionController.restore(sessionToken) is ProtectionResult.Success
+                } else {
+                    revertAppSettingsUseCase(requireNotNull(componentName)) ==
+                        AppSettingsResult.Success
+                }
+                // Leaving the notification up is the only feedback a receiver can give. The session
+                // is moved to RECOVERY_REQUIRED either way, which Settings surfaces with a reason.
+                if (restored) {
+                    notificationManagerWrapper.cancel(notificationId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 }

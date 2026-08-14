@@ -32,14 +32,23 @@ interface AndroidNotificationManagerWrapper {
         channelId: String,
         name: String,
         importance: Int,
+        description: String? = null,
     )
+
+    fun areNotificationsEnabled(): Boolean
+
+    fun isNotificationChannelEnabled(channelId: String): Boolean
 
     fun cancel(id: Int)
 
     companion object {
         const val NOTIFICATION_CHANNEL_ID = "geto_notification_channel_id"
+        const val PROTECTION_NOTIFICATION_CHANNEL_ID = "geto_protection"
+        const val PROTECTION_ALERT_CHANNEL_ID = "geto_protection_alerts"
+        const val ONE_SHOT_NOTIFICATION_ID = 10_001
         const val ACTION_REVERT_SETTINGS = "ACTION_REVERT_SETTINGS"
         const val NOTIFICATION_EXTRA_COMPONENT_NAME = "component_name"
         const val NOTIFICATION_EXTRA_NOTIFICATION_ID = "notification_id"
+        const val NOTIFICATION_EXTRA_SESSION_TOKEN = "session_token"
     }
 }

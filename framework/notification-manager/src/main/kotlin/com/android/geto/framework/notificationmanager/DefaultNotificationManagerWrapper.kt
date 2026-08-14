@@ -49,13 +49,26 @@ internal class DefaultNotificationManagerWrapper @Inject constructor(@param:Appl
         channelId: String,
         name: String,
         importance: Int,
+        description: String?,
     ) {
         notificationManager.createNotificationChannel(
             NotificationChannel(
                 channelId,
                 name,
                 importance,
-            ),
+            ).apply {
+                this.description = description
+            },
         )
+    }
+
+    override fun areNotificationsEnabled(): Boolean = notificationManager.areNotificationsEnabled()
+
+    override fun isNotificationChannelEnabled(channelId: String): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        notificationManager.getNotificationChannel(channelId)?.let {
+            it.importance != NotificationManager.IMPORTANCE_NONE
+        } ?: false
+    } else {
+        notificationManager.areNotificationsEnabled()
     }
 }

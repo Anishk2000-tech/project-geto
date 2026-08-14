@@ -44,7 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -80,27 +80,23 @@ internal fun AppSettingDialog(
         text: String,
     ) -> Unit,
 ) {
-    var selectedRadioOptionIndex by remember { mutableIntStateOf(0) }
+    var selectedRadioOptionIndex by rememberSaveable { mutableIntStateOf(0) }
 
-    var label by remember { mutableStateOf("") }
+    var label by rememberSaveable { mutableStateOf("") }
 
-    var key by remember { mutableStateOf("") }
+    var key by rememberSaveable { mutableStateOf("") }
 
-    var valueOnLaunch by remember { mutableStateOf("") }
+    var valueOnLaunch by rememberSaveable { mutableStateOf("") }
 
-    var valueOnRevert by remember { mutableStateOf("") }
+    var valueOnRevert by rememberSaveable { mutableStateOf("") }
 
-    var showLabelError by remember { mutableStateOf(false) }
+    var showLabelError by rememberSaveable { mutableStateOf(false) }
 
-    var showKeyError by remember { mutableStateOf(false) }
+    var showKeyError by rememberSaveable { mutableStateOf(false) }
 
-    var showKeyNotFoundError by remember { mutableStateOf(false) }
+    var showValueOnLaunchError by rememberSaveable { mutableStateOf(false) }
 
-    var showValueOnLaunchError by remember { mutableStateOf(false) }
-
-    var showValueOnRevertError by remember { mutableStateOf(false) }
-
-    var secureSettingsExpanded by remember { mutableStateOf(false) }
+    var secureSettingsExpanded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(key1 = Unit) {
         snapshotFlow { key }
@@ -156,12 +152,10 @@ internal fun AppSettingDialog(
                 secureSettings = secureSettings,
                 secureSettingsExpanded = secureSettingsExpanded,
                 showKeyError = showKeyError,
-                showKeyNotFoundError = showKeyNotFoundError,
+                showKeyNotFoundError = false,
                 showLabelError = showLabelError,
                 showValueOnLaunchError = showValueOnLaunchError,
-                showValueOnRevertError = showValueOnRevertError,
                 valueOnLaunch = valueOnLaunch,
-                valueOnRevert = valueOnRevert,
                 onUpdateKey = {
                     key = it
                 },
@@ -186,18 +180,11 @@ internal fun AppSettingDialog(
 
                     showKeyError = key.isBlank()
 
-                    showKeyNotFoundError =
-                        key.isNotBlank() && !secureSettings.mapNotNull { it.name }.contains(key)
-
                     showValueOnLaunchError = valueOnLaunch.isBlank()
 
-                    showValueOnRevertError = valueOnRevert.isBlank()
-
                     if (!showLabelError &&
-                        !showKeyNotFoundError &&
                         !showKeyError &&
-                        !showValueOnLaunchError &&
-                        !showValueOnRevertError
+                        !showValueOnLaunchError
                     ) {
                         onAddAppSetting(
                             AppSetting(
@@ -270,9 +257,7 @@ private fun AppSettingDialogTextFields(
     showKeyNotFoundError: Boolean,
     showLabelError: Boolean,
     showValueOnLaunchError: Boolean,
-    showValueOnRevertError: Boolean,
     valueOnLaunch: String,
-    valueOnRevert: String,
     onUpdateKey: (String) -> Unit,
     onUpdateLabel: (String) -> Unit,
     onUpdateSecureSettingsExpanded: (Boolean) -> Unit,
@@ -282,8 +267,6 @@ private fun AppSettingDialogTextFields(
     val labelIsBlank = stringResource(id = R.string.setting_label_is_blank)
 
     val valueOnLaunchIsBlank = stringResource(id = R.string.setting_value_on_launch_is_blank)
-
-    val valueOnRevertIsBlank = stringResource(id = R.string.setting_value_on_revert_is_blank)
 
     OutlinedTextField(
         modifier = Modifier
@@ -339,30 +322,7 @@ private fun AppSettingDialogTextFields(
             null
         },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-    )
-
-    Spacer(modifier = Modifier.height(5.dp))
-
-    OutlinedTextField(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp),
-        value = valueOnRevert,
-        onValueChange = onUpdateValueOnRevert,
-        label = {
-            Text(text = stringResource(R.string.setting_value_on_revert))
-        },
-        isError = showValueOnRevertError,
-        supportingText = if (showValueOnRevertError) {
-            {
-                Text(text = valueOnRevertIsBlank)
-            }
-        } else {
-            null
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
     )
 }
 

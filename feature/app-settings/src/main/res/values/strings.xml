@@ -16,10 +16,10 @@
   ~
   -->
 <resources>
-    <string name="app_settings_disabled">Please enable atleast one setting</string>
+    <string name="app_settings_disabled">Please enable at least one setting</string>
     <string name="empty_app_settings_list">No settings found</string>
     <string name="geto_settings">Geto Settings</string>
-    <string name="apply_success">Settings apply success</string>
+    <string name="apply_success">Settings applied</string>
     <string name="apply_failure">Settings apply failed</string>
     <string name="revert_failure">Settings revert failed</string>
     <string name="revert_success">Settings reverted</string>
@@ -30,6 +30,7 @@
     <string name="setting_value_on_launch">Setting value on launch</string>
     <string name="setting_value_on_revert">Setting value on revert</string>
     <string name="templates">Templates</string>
+    <string name="close">Close</string>
     <string name="add_shortcut">Add Shortcut</string>
     <string name="update_shortcut">Update Shortcut</string>
     <string name="short_label">Short label</string>
@@ -53,4 +54,46 @@
     <string name="app_setting_added_successfully">App setting added successfully</string>
     <string name="no_permission">Please grant the WRITE_SECURE_SETTINGS permission via ADB</string>
     <string name="write_secure_settings_message">Copy the command below and run it via ADB to grant the Write Secure Settings permission</string>
+    <string name="copy">Copy</string>
+    <string name="okay">Okay</string>
+    <string name="back">Back</string>
+    <string name="restore_settings">Restore settings</string>
+    <string name="add_setting">Add setting</string>
+    <string name="manage_shortcut">Manage shortcut</string>
+    <string name="add_template">Add template</string>
+    <string name="add_named_template">Add %1$s template</string>
+    <string name="launch_once">Launch once</string>
+    <string name="delete_setting">Delete setting</string>
+    <string name="delete_named_setting">Delete %1$s setting</string>
+    <string name="app_icon">App icon</string>
+    <string name="keep_profile_active">Apply while this app is open</string>
+    <string name="keep_profile_active_summary">Geto applies these values when you open this app and puts your originals back when you leave.</string>
+    <string name="protection_active">Protection active</string>
+    <string name="protection_starting">Starting protection…</string>
+    <string name="protection_restoring">Restoring original settings…</string>
+    <string name="protection_recovery_required">Protection needs attention</string>
+    <string name="protection_inactive">Protection off</string>
+    <string name="turn_off_to_edit">Turn off protection before editing this profile.</string>
+    <string name="switch_profile_title">Switch protected app?</string>
+    <string name="switch_profile_action">Switch profile</string>
+    <string name="switch_profile_message">Restore the original settings for %1$s, then switch protection to %2$s?</string>
+    <string name="turn_off_protection">Turn off protection</string>
+    <string name="retry_restore">Retry restore</string>
+    <string name="notification_permission_required">Allow notifications before applying settings so Geto can always offer recovery.</string>
+    <string name="open_notification_settings">Notification settings</string>
+    <string name="launch_failed">The target app could not be opened. Geto is restoring the original settings.</string>
+    <string name="launch_failed_restore_failed">The target app could not be opened, and some original settings still need recovery. Use Restore below.</string>
+    <string name="settings_rollback_failed">Some original values could not be restored. Open Geto and retry.</string>
+    <string name="setting_deleted">Setting deleted</string>
+    <string name="undo">Undo</string>
+    <string name="one_shot_active">Settings applied until restored</string>
+    <string name="another_profile_active">Another app profile is active</string>
+    <string name="background_protection_stopped">The profile is still applied, but background monitoring stopped.</string>
+    <string name="resume_background_protection">Resume monitoring</string>
+    <string name="another_app">Another app</string>
+    <string name="key_conflict_title">Setting already in use</string>
+    <string name="key_conflict_message">%1$s already protects %2$s with the value %3$s. This profile wants %4$s. Turn off %1$s, or change this setting to match.</string>
+    <string name="got_it">Got it</string>
+    <string name="protection_paused_status">Paused</string>
+    <string name="protection_waiting">Waiting — applies when you open this app</string>
 </resources>

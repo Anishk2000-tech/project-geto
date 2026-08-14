@@ -19,43 +19,36 @@ package com.android.geto.domain.usecase
 
 import com.android.geto.domain.common.dispatcher.Dispatcher
 import com.android.geto.domain.common.dispatcher.GetoDispatchers
-import com.android.geto.domain.framework.SecureSettingsWrapper
 import com.android.geto.domain.model.AppSettingsResult
-import com.android.geto.domain.repository.AppSettingsRepository
+import com.android.geto.domain.model.ProtectionMode
+import com.android.geto.domain.model.ProtectionResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class ApplyAppSettingsUseCase @Inject constructor(
-    private val appSettingsRepository: AppSettingsRepository,
-    private val secureSettingsWrapper: SecureSettingsWrapper,
+    private val protectionController: ProtectionController,
     @param:Dispatcher(GetoDispatchers.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(componentName: String): AppSettingsResult = withContext(defaultDispatcher) {
-        val appSettings =
-            appSettingsRepository.getAppSettingsByComponentName(componentName = componentName)
+        when (protectionController.enable(componentName, ProtectionMode.ONE_SHOT)) {
+            is ProtectionResult.Success -> AppSettingsResult.Success
 
-        if (appSettings.isEmpty()) return@withContext AppSettingsResult.EmptyAppSettings
+            ProtectionResult.EmptyProfile -> AppSettingsResult.EmptyAppSettings
 
-        if (appSettings.all { !it.enabled }) return@withContext AppSettingsResult.DisabledAppSettings
+            ProtectionResult.NoEnabledSettings -> AppSettingsResult.DisabledAppSettings
 
-        try {
-            if (appSettings.all {
-                    secureSettingsWrapper.canWriteSecureSettings(
-                        settingType = it.settingType,
-                        key = it.key,
-                        value = it.valueOnLaunch,
-                    )
-                }
-            ) {
-                AppSettingsResult.Success
-            } else {
-                AppSettingsResult.Failure
-            }
-        } catch (_: SecurityException) {
-            AppSettingsResult.NoPermission
-        } catch (_: IllegalArgumentException) {
-            AppSettingsResult.InvalidValues
+            is ProtectionResult.PermissionDenied -> AppSettingsResult.NoPermission
+
+            is ProtectionResult.InvalidProfile -> AppSettingsResult.InvalidValues
+
+            is ProtectionResult.Failure,
+            is ProtectionResult.KeyConflict,
+            is ProtectionResult.KeyNotProtected,
+            is ProtectionResult.StaleSession,
+            ProtectionResult.NoActiveProtection,
+            is ProtectionResult.RecoveryRequired,
+            -> AppSettingsResult.Failure
         }
     }
 }

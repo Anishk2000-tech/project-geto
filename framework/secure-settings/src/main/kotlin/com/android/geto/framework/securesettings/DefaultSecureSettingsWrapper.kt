@@ -17,19 +17,25 @@
  */
 package com.android.geto.framework.securesettings
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.database.getLongOrNull
 import androidx.core.database.getStringOrNull
 import com.android.geto.domain.common.dispatcher.Dispatcher
 import com.android.geto.domain.common.dispatcher.GetoDispatchers.IO
 import com.android.geto.domain.framework.SecureSettingsWrapper
+import com.android.geto.domain.model.ProtectionFailureReason
 import com.android.geto.domain.model.SecureSetting
+import com.android.geto.domain.model.SettingReadResult
 import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.model.SettingType.GLOBAL
 import com.android.geto.domain.model.SettingType.SECURE
 import com.android.geto.domain.model.SettingType.SYSTEM
+import com.android.geto.domain.model.SettingWriteResult
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -47,30 +53,116 @@ internal class DefaultSecureSettingsWrapper @Inject constructor(
         Settings.NameValueTable.VALUE,
     )
 
-    override suspend fun canWriteSecureSettings(
+    override fun hasWriteSecureSettingsPermission(): Boolean = context.checkSelfPermission(
+        Manifest.permission.WRITE_SECURE_SETTINGS,
+    ) == PackageManager.PERMISSION_GRANTED
+
+    override suspend fun read(
         settingType: SettingType,
         key: String,
-        value: String,
-    ): Boolean = withContext(ioDispatcher) {
-        when (settingType) {
-            SYSTEM -> Settings.System.putString(
-                contentResolver,
-                key,
-                value,
-            )
-
-            SECURE -> Settings.Secure.putString(
-                contentResolver,
-                key,
-                value,
-            )
-
-            GLOBAL -> Settings.Global.putString(
-                contentResolver,
-                key,
-                value,
+    ): SettingReadResult = withContext(ioDispatcher) {
+        if (key.isBlank()) {
+            return@withContext SettingReadResult.Failure(
+                reason = ProtectionFailureReason.INVALID_KEY,
+                message = "Setting key must not be blank",
             )
         }
+
+        try {
+            SettingReadResult.Success(readValue(settingType, key))
+        } catch (exception: SecurityException) {
+            SettingReadResult.Failure(
+                reason = ProtectionFailureReason.PERMISSION_DENIED,
+                message = exception.message,
+            )
+        } catch (exception: IllegalArgumentException) {
+            SettingReadResult.Failure(
+                reason = ProtectionFailureReason.INVALID_KEY,
+                message = exception.message,
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: RuntimeException) {
+            SettingReadResult.Failure(
+                reason = ProtectionFailureReason.READ_FAILED,
+                message = exception.message,
+            )
+        }
+    }
+
+    override suspend fun write(
+        settingType: SettingType,
+        key: String,
+        value: String?,
+    ): SettingWriteResult = withContext(ioDispatcher) {
+        if (!hasWriteSecureSettingsPermission()) {
+            return@withContext SettingWriteResult.Failure(
+                reason = ProtectionFailureReason.PERMISSION_DENIED,
+                expectedValue = value,
+                message = "WRITE_SECURE_SETTINGS has not been granted",
+            )
+        }
+
+        if (key.isBlank()) {
+            return@withContext SettingWriteResult.Failure(
+                reason = ProtectionFailureReason.INVALID_KEY,
+                expectedValue = value,
+                message = "Setting key must not be blank",
+            )
+        }
+
+        try {
+            val accepted = when (settingType) {
+                SYSTEM -> Settings.System.putString(contentResolver, key, value)
+                SECURE -> Settings.Secure.putString(contentResolver, key, value)
+                GLOBAL -> Settings.Global.putString(contentResolver, key, value)
+            }
+
+            if (!accepted) {
+                return@withContext SettingWriteResult.Failure(
+                    reason = ProtectionFailureReason.WRITE_REJECTED,
+                    expectedValue = value,
+                    actualValue = readValue(settingType, key),
+                )
+            }
+
+            val actualValue = readValue(settingType, key)
+            if (actualValue == value) {
+                SettingWriteResult.Success(value = actualValue)
+            } else {
+                SettingWriteResult.Failure(
+                    reason = ProtectionFailureReason.VERIFICATION_FAILED,
+                    expectedValue = value,
+                    actualValue = actualValue,
+                )
+            }
+        } catch (exception: SecurityException) {
+            SettingWriteResult.Failure(
+                reason = ProtectionFailureReason.PERMISSION_DENIED,
+                expectedValue = value,
+                message = exception.message,
+            )
+        } catch (exception: IllegalArgumentException) {
+            SettingWriteResult.Failure(
+                reason = ProtectionFailureReason.INVALID_KEY,
+                expectedValue = value,
+                message = exception.message,
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: RuntimeException) {
+            SettingWriteResult.Failure(
+                reason = ProtectionFailureReason.WRITE_REJECTED,
+                expectedValue = value,
+                message = exception.message,
+            )
+        }
+    }
+
+    private fun readValue(settingType: SettingType, key: String): String? = when (settingType) {
+        SYSTEM -> Settings.System.getString(contentResolver, key)
+        SECURE -> Settings.Secure.getString(contentResolver, key)
+        GLOBAL -> Settings.Global.getString(contentResolver, key)
     }
 
     override suspend fun getSecureSettings(settingType: SettingType): List<SecureSetting> = withContext(ioDispatcher) {

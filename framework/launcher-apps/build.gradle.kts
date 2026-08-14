@@ -28,5 +28,5 @@ android {
 dependencies {
     implementation(projects.domain.common)
     implementation(projects.domain.framework)
-    implementation(projects.framework.drawable)
+    implementation(libs.coil.kt.compose)
 }

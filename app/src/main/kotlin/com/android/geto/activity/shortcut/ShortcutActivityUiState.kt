@@ -17,13 +17,15 @@
  */
 package com.android.geto.activity.shortcut
 
-import com.android.geto.domain.model.AppSettingsResult
+import com.android.geto.domain.model.ProtectionResult
 
 sealed interface ShortcutActivityUiState {
     data object Loading : ShortcutActivityUiState
 
+    data object Error : ShortcutActivityUiState
+
     data class Success(
-        val appSettingsResult: AppSettingsResult?,
+        val protectionResult: ProtectionResult,
         val applicationIcon: ByteArray?,
     ) : ShortcutActivityUiState {
         override fun equals(other: Any?): Boolean {
@@ -32,14 +34,14 @@ sealed interface ShortcutActivityUiState {
 
             other as Success
 
-            if (appSettingsResult != other.appSettingsResult) return false
+            if (protectionResult != other.protectionResult) return false
             if (!applicationIcon.contentEquals(other.applicationIcon)) return false
 
             return true
         }
 
         override fun hashCode(): Int {
-            var result = appSettingsResult?.hashCode() ?: 0
+            var result = protectionResult.hashCode()
             result = 31 * result + (applicationIcon?.contentHashCode() ?: 0)
             return result
         }

@@ -1,0 +1,32 @@
+Geto changes
+============
+
+Performance
+- App metadata loads before icons; icons are fetched lazily and cached as list rows appear.
+- Added a process-wide app-list cache, bulk update-time lookup, incremental package updates,
+  debounced search, retry support, and fully-drawn startup reporting.
+
+Protection reliability
+- Reworked setting application into a persisted transaction: snapshot original values, apply and
+  verify every value, then roll back in reverse order if anything fails.
+- Added session tokens so old notifications or delayed callbacks cannot restore a newer profile.
+- Added persistent “Keep profile active” protection for apps opened from their original icon.
+- Added recovery states and an actionable WRITE_SECURE_SETTINGS permission path.
+
+Background and battery
+- Replaced the old observer service with a special-use foreground service.
+- It observes only protected setting keys, coalesces changes for 500 ms, avoids polling, and holds
+  no wake lock.
+- Added optional automatic restart with bounded exponential backoff, boot/update recovery, service
+  status, Resume controls, and notifications for interruptions or recovery failures.
+
+UI and accessibility
+- Improved notification-permission flows, including rotation-safe continuation after settings.
+- Improved shortcut error handling and launch-failure restoration.
+- Added clearer profile-switch confirmation, responsive action layouts, accessible switch semantics,
+  descriptive delete/template actions, and improved dialog sizing.
+
+Data and validation
+- Added Room database migration 9 to 10 for persisted protection sessions and snapshots.
+- Added unit tests for protection transactions and app-list state, plus on-device Room migration
+  tests. Formatting, Android lint, unit tests, migration tests, and debug APK assembly passed.

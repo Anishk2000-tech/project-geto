@@ -36,53 +36,52 @@ class GetLauncherAppsActivityInfosUseCase @Inject constructor(
     private val userDataRepository: UserDataRepository,
     @param:Dispatcher(GetoDispatchers.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) {
-    operator fun invoke(textFlow: Flow<String?>) = combine(
-        textFlow,
+    operator fun invoke(): Flow<Result<LauncherAppsActivityInfoData>> = combine(
         launcherAppsWrapper.getActivityListFlow(),
         userDataRepository.userData,
-    ) { text, launcherAppsActivityInfos, userData ->
-        val comparator = when (userData.sortLauncherAppsActivityInfo) {
-            SortLauncherAppsActivityInfo.Name -> {
-                compareBy(String.CASE_INSENSITIVE_ORDER) { it.activityLabel }
-            }
-
-            SortLauncherAppsActivityInfo.UpdateTime -> {
-                compareBy<LauncherAppsActivityInfo> { it.lastUpdateTime }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.activityLabel }
-            }
-
-            SortLauncherAppsActivityInfo.InstallTime -> {
-                compareBy<LauncherAppsActivityInfo> { it.firstInstallTime }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.activityLabel }
-            }
-        }
-
-        val filteredLauncherAppsActivityInfos = if (userData.showSystem) {
-            launcherAppsActivityInfos
-        } else {
-            launcherAppsActivityInfos.filterNot { it.isSystem }
-        }
-
-        val sortedLauncherAppsActivityInfos = filteredLauncherAppsActivityInfos.sortedWith(
-            if (userData.sortOrderLauncherAppsActivityInfo == SortOrderLauncherAppsActivityInfo.Ascending) {
-                comparator
-            } else {
-                comparator.reversed()
-            },
-        )
-
-        LauncherAppsActivityInfoData(
-            launcherAppsActivityInfos = if (text.isNullOrEmpty()) {
-                sortedLauncherAppsActivityInfos
-            } else {
-                sortedLauncherAppsActivityInfos.filter {
-                    it.activityLabel.contains(
-                        other = text,
-                        ignoreCase = true,
-                    )
+    ) { launcherAppsResult, userData ->
+        launcherAppsResult.map { launcherAppsActivityInfos ->
+            val comparator = when (userData.sortLauncherAppsActivityInfo) {
+                SortLauncherAppsActivityInfo.Name -> {
+                    compareBy<LauncherAppsActivityInfo, String>(String.CASE_INSENSITIVE_ORDER) {
+                        it.activityLabel
+                    }
                 }
-            },
-            userData = userData,
-        )
+
+                SortLauncherAppsActivityInfo.UpdateTime -> {
+                    compareBy<LauncherAppsActivityInfo> { it.lastUpdateTime }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.activityLabel }
+                }
+
+                SortLauncherAppsActivityInfo.InstallTime -> {
+                    compareBy<LauncherAppsActivityInfo> { it.firstInstallTime }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.activityLabel }
+                }
+            }
+
+            val filteredLauncherAppsActivityInfos = if (userData.showSystem) {
+                launcherAppsActivityInfos
+            } else {
+                launcherAppsActivityInfos.filterNot { it.isSystem }
+            }
+
+            val orderedComparator =
+                if (userData.sortOrderLauncherAppsActivityInfo == SortOrderLauncherAppsActivityInfo.Ascending) {
+                    comparator
+                } else {
+                    comparator.reversed()
+                }
+
+            LauncherAppsActivityInfoData(
+                launcherAppsActivityInfos = filteredLauncherAppsActivityInfos.sortedWith(
+                    orderedComparator.thenBy { it.componentName },
+                ),
+                userData = userData,
+            )
+        }
     }.flowOn(defaultDispatcher)
+
+    fun refresh() {
+        launcherAppsWrapper.refresh()
+    }
 }

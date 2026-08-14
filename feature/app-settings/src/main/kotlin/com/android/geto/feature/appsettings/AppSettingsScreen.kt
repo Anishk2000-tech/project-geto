@@ -17,81 +17,113 @@
  */
 package com.android.geto.feature.appsettings
 
+import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.geto.broadcastreceiver.RevertSettingsBroadcastReceiver
 import com.android.geto.designsystem.icon.GetoIcons
 import com.android.geto.domain.model.AddAppSettingResult
 import com.android.geto.domain.model.AppSetting
 import com.android.geto.domain.model.AppSettingTemplate
-import com.android.geto.domain.model.AppSettingsResult
 import com.android.geto.domain.model.GetPinShortcutResult
+import com.android.geto.domain.model.ProtectedApp
+import com.android.geto.domain.model.ProtectionMode
+import com.android.geto.domain.model.ProtectionResult
+import com.android.geto.domain.model.ProtectionSessionStatus
+import com.android.geto.domain.model.ProtectionState
 import com.android.geto.domain.model.RequestPinShortcutResult
 import com.android.geto.domain.model.SecureSetting
 import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.model.UpdatePinShortcutResult
+import com.android.geto.domain.model.isPaused
 import com.android.geto.feature.appsettings.dialog.AppSettingDialog
 import com.android.geto.feature.appsettings.dialog.RequestPinShortcutDialog
 import com.android.geto.feature.appsettings.dialog.TemplateDialog
 import com.android.geto.feature.appsettings.dialog.UpdatePinShortcutDialog
 import com.android.geto.feature.appsettings.dialog.WriteSecureSettingsDialog
 import com.android.geto.feature.appsettings.navigation.AppSettingsRouteData
+import com.android.geto.framework.launcherapps.LaunchResult
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.ACTION_REVERT_SETTINGS
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_COMPONENT_NAME
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_NOTIFICATION_ID
+import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.NOTIFICATION_EXTRA_SESSION_TOKEN
+import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper.Companion.ONE_SHOT_NOTIFICATION_ID
 import com.android.geto.ui.local.LocalLauncherApps
 import com.android.geto.ui.local.LocalNotificationManager
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import com.android.geto.common.R as commonR
 
 @Composable
@@ -101,13 +133,115 @@ internal fun AppSettingsRoute(
     appSettingsRouteData: AppSettingsRouteData,
     onNavigationIconClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val notificationManager = LocalNotificationManager.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var pendingNotificationAction by
+        rememberSaveable { mutableStateOf<NotificationPermissionAction?>(null) }
+    var pendingNotificationRequiredChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    var notificationSettingsChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showNotificationPermissionDialog by rememberSaveable { mutableStateOf(false) }
+
+    fun clearPendingNotificationAction() {
+        pendingNotificationAction = null
+        pendingNotificationRequiredChannelId = null
+    }
+
+    fun executeNotificationAction(action: NotificationPermissionAction) {
+        when (action) {
+            NotificationPermissionAction.LAUNCH_ONCE -> viewModel.launchOnce()
+
+            NotificationPermissionAction.ENABLE_PERSISTENT ->
+                viewModel.setForegroundProtection(enabled = true)
+
+            NotificationPermissionAction.RESUME_PERSISTENT -> viewModel.resumeProtection()
+        }
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val pendingAction = pendingNotificationAction
+        val requiredChannelId = pendingNotificationRequiredChannelId
+        val missingChannelId = requiredChannelId?.takeUnless {
+            notificationManager.isNotificationChannelEnabled(it)
+        }
+        if (granted && notificationManager.areNotificationsEnabled() && missingChannelId == null) {
+            clearPendingNotificationAction()
+            pendingAction?.let(::executeNotificationAction)
+        } else {
+            notificationSettingsChannelId = missingChannelId
+            showNotificationPermissionDialog = true
+        }
+    }
+
+    fun runWithNotificationPermission(
+        requiredChannelId: String,
+        action: NotificationPermissionAction,
+    ) {
+        val notificationsEnabled = notificationManager.areNotificationsEnabled()
+        val runtimePermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+        val missingChannelId = requiredChannelId.takeUnless {
+            notificationManager.isNotificationChannelEnabled(it)
+        }
+
+        when {
+            notificationsEnabled && runtimePermissionGranted && missingChannelId == null ->
+                executeNotificationAction(action)
+
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !runtimePermissionGranted -> {
+                pendingNotificationAction = action
+                pendingNotificationRequiredChannelId = requiredChannelId
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+
+            else -> {
+                pendingNotificationAction = action
+                pendingNotificationRequiredChannelId = requiredChannelId
+                notificationSettingsChannelId = missingChannelId
+                showNotificationPermissionDialog = true
+            }
+        }
+    }
+
+    DisposableEffect(
+        lifecycleOwner,
+        pendingNotificationAction,
+        pendingNotificationRequiredChannelId,
+    ) {
+        val observer = LifecycleEventObserver { _, event ->
+            val action = pendingNotificationAction
+            val requiredChannelId = pendingNotificationRequiredChannelId
+            if (
+                event == Lifecycle.Event.ON_RESUME &&
+                action != null &&
+                requiredChannelId != null &&
+                notificationManager.areNotificationsEnabled() &&
+                notificationManager.isNotificationChannelEnabled(requiredChannelId)
+            ) {
+                clearPendingNotificationAction()
+                notificationSettingsChannelId = null
+                showNotificationPermissionDialog = false
+                executeNotificationAction(action)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val appSettingsUiState by viewModel.appSettingsUiState.collectAsStateWithLifecycle()
 
     val secureSettings by viewModel.secureSettings.collectAsStateWithLifecycle()
 
-    val applyAppSettingsResult by viewModel.applyAppSettingsResult.collectAsStateWithLifecycle()
-
-    val revertAppSettingsResult by viewModel.revertAppSettingsResult.collectAsStateWithLifecycle()
+    val protectionActionResult by viewModel.protectionActionResult.collectAsStateWithLifecycle()
+    val isArmed by viewModel.isArmed.collectAsStateWithLifecycle()
+    val protectionState by viewModel.protectionState.collectAsStateWithLifecycle()
+    val isProtectionServiceRunning by
+        viewModel.isProtectionServiceRunning.collectAsStateWithLifecycle()
 
     val addAppSettingResult by viewModel.addAppSettingsResult.collectAsStateWithLifecycle()
 
@@ -128,21 +262,40 @@ internal fun AppSettingsRoute(
         activityIcon = activityIcon,
         secureSettings = secureSettings,
         addAppSettingResult = addAppSettingResult,
-        applyAppSettingsResult = applyAppSettingsResult,
-        revertAppSettingsResult = revertAppSettingsResult,
+        protectionActionResult = protectionActionResult,
+        protectionState = protectionState,
+        isArmed = isArmed,
+        isProtectionServiceRunning = isProtectionServiceRunning,
         requestPinShortcutResult = requestPinShortcutResult,
         appSettingTemplates = appSettingTemplates,
         updatePinShortcutResult = updatePinShortcutResult,
-        onApplyAppSettings = viewModel::applyAppSettings,
-        onRevertAppSettings = viewModel::revertAppSettings,
+        onLaunchOnce = {
+            runWithNotificationPermission(
+                requiredChannelId = AndroidNotificationManagerWrapper.NOTIFICATION_CHANNEL_ID,
+                action = NotificationPermissionAction.LAUNCH_ONCE,
+            )
+        },
+        onSetPersistentProtection = { enabled, _ ->
+            // Arming writes nothing on its own, so there is no notification to ask about here; the
+            // service and its notification only appear once the app is actually opened.
+            viewModel.setForegroundProtection(enabled = enabled)
+        },
+        onRestoreAfterLaunchFailure = viewModel::restoreProtection,
+        onResumeProtection = {
+            runWithNotificationPermission(
+                requiredChannelId =
+                AndroidNotificationManagerWrapper.PROTECTION_NOTIFICATION_CHANNEL_ID,
+                action = NotificationPermissionAction.RESUME_PERSISTENT,
+            )
+        },
         onCheckAppSetting = viewModel::checkAppSetting,
         onDeleteAppSetting = viewModel::deleteAppSetting,
         onAddAppSetting = viewModel::addAppSetting,
+        onAddAppSettingTemplate = viewModel::addAppSettingTemplate,
         onRequestPinShortcut = viewModel::requestPinShortcut,
         onGetSecureSettingsByName = viewModel::getSecureSettingsByName,
-        onResetApplyAppSettingsResult = viewModel::resetApplyAppSettingsResult,
+        onResetProtectionActionResult = viewModel::resetProtectionActionResult,
         onResetRequestPinShortcutResult = viewModel::resetRequestPinShortcutResult,
-        onResetRevertAppSettingsResult = viewModel::resetRevertAppSettingsResult,
         onResetAddAppSettingResult = viewModel::resetAddAppSettingResult,
         onNavigationIconClick = onNavigationIconClick,
         getPinShortcutResult = getPinShortcutResult,
@@ -150,6 +303,65 @@ internal fun AppSettingsRoute(
         onResetGetPinShortcutResult = viewModel::resetGetPinShortcutResult,
         onUpdatePinShortcut = viewModel::updatePinShorcut,
         onResetUpdatePinShortcutResult = viewModel::resetUpdatePinShortcutResult,
+    )
+
+    if (showNotificationPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                clearPendingNotificationAction()
+                notificationSettingsChannelId = null
+                showNotificationPermissionDialog = false
+            },
+            title = { Text(stringResource(R.string.permission)) },
+            text = { Text(stringResource(R.string.notification_permission_required)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationPermissionDialog = false
+                        val channelId = notificationSettingsChannelId
+                        notificationSettingsChannelId = null
+                        context.startActivity(notificationSettingsIntent(context, channelId))
+                    },
+                ) {
+                    Text(stringResource(R.string.open_notification_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        clearPendingNotificationAction()
+                        notificationSettingsChannelId = null
+                        showNotificationPermissionDialog = false
+                    },
+                ) {
+                    Text(stringResource(commonR.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+private enum class NotificationPermissionAction {
+    LAUNCH_ONCE,
+    ENABLE_PERSISTENT,
+    RESUME_PERSISTENT,
+}
+
+private fun notificationSettingsIntent(context: Context, channelId: String?): Intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    Intent(
+        if (channelId != null) {
+            Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS
+        } else {
+            Settings.ACTION_APP_NOTIFICATION_SETTINGS
+        },
+    ).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        channelId?.let { putExtra(Settings.EXTRA_CHANNEL_ID, it) }
+    }
+} else {
+    Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null),
     )
 }
 
@@ -162,26 +374,30 @@ internal fun AppSettingsScreen(
     activityIcon: ByteArray?,
     secureSettings: List<SecureSetting>,
     addAppSettingResult: AddAppSettingResult?,
-    applyAppSettingsResult: AppSettingsResult?,
-    revertAppSettingsResult: AppSettingsResult?,
+    protectionActionResult: ProtectionActionResult?,
+    protectionState: ProtectionState,
+    isArmed: Boolean,
+    isProtectionServiceRunning: Boolean,
     requestPinShortcutResult: RequestPinShortcutResult?,
     appSettingTemplates: List<AppSettingTemplate>,
     getPinShortcutResult: GetPinShortcutResult?,
     updatePinShortcutResult: UpdatePinShortcutResult?,
-    onApplyAppSettings: () -> Unit,
-    onRevertAppSettings: () -> Unit,
+    onLaunchOnce: () -> Unit,
+    onSetPersistentProtection: (enabled: Boolean, sessionToken: String?) -> Unit,
+    onRestoreAfterLaunchFailure: (expectedSessionToken: String) -> Unit,
+    onResumeProtection: () -> Unit,
     onCheckAppSetting: (appSetting: AppSetting) -> Unit,
     onDeleteAppSetting: (appSetting: AppSetting) -> Unit,
     onAddAppSetting: (AppSetting) -> Unit,
+    onAddAppSettingTemplate: (AppSettingTemplate) -> Unit,
     onRequestPinShortcut: (
         icon: ByteArray?,
         shortLabel: String,
         longLabel: String,
     ) -> Unit,
     onGetSecureSettingsByName: (settingType: SettingType, text: String) -> Unit,
-    onResetApplyAppSettingsResult: () -> Unit,
+    onResetProtectionActionResult: () -> Unit,
     onResetRequestPinShortcutResult: () -> Unit,
-    onResetRevertAppSettingsResult: () -> Unit,
     onResetAddAppSettingResult: () -> Unit,
     onNavigationIconClick: () -> Unit,
     onGetPinShortcut: () -> Unit,
@@ -193,26 +409,28 @@ internal fun AppSettingsScreen(
     ) -> Unit,
     onResetUpdatePinShortcutResult: () -> Unit,
 ) {
-    var showAppSettingDialog by remember { mutableStateOf(false) }
+    var showAppSettingDialog by rememberSaveable { mutableStateOf(false) }
 
-    var showTemplateDialog by remember { mutableStateOf(false) }
+    var showTemplateDialog by rememberSaveable { mutableStateOf(false) }
 
-    var showWriteSecureSettingsDialog by remember { mutableStateOf(false) }
+    var showWriteSecureSettingsDialog by rememberSaveable { mutableStateOf(false) }
+    var keyConflict by remember { mutableStateOf<ProtectionResult.KeyConflict?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val deletedMessage = stringResource(R.string.setting_deleted)
+    val undoLabel = stringResource(R.string.undo)
 
     AppSettingsLaunchedEffects(
         appSettingsRouteData = appSettingsRouteData,
         snackbarHostState = snackbarHostState,
         activityIcon = activityIcon,
         addAppSettingResult = addAppSettingResult,
-        applyAppSettingsResult = applyAppSettingsResult,
-        revertAppSettingsResult = revertAppSettingsResult,
+        protectionActionResult = protectionActionResult,
         requestPinShortcutResult = requestPinShortcutResult,
         getPinShortcutResult = getPinShortcutResult,
         updatePinShortcutResult = updatePinShortcutResult,
-        onResetApplyAppSettingsResult = onResetApplyAppSettingsResult,
-        onResetRevertAppSettingsResult = onResetRevertAppSettingsResult,
+        onResetProtectionActionResult = onResetProtectionActionResult,
         onResetRequestPinShortcutResult = onResetRequestPinShortcutResult,
         onResetAddAppSettingResult = onResetAddAppSettingResult,
         onShowWriteSecureSettingsDialog = {
@@ -220,7 +438,15 @@ internal fun AppSettingsScreen(
         },
         onResetGetPinShortcutResult = onResetGetPinShortcutResult,
         onResetUpdatePinShortcutResult = onResetUpdatePinShortcutResult,
+        onKeyConflict = { keyConflict = it },
+        onRestoreAfterLaunchFailure = onRestoreAfterLaunchFailure,
     )
+
+    // Scoped to this component: another app being protected is not this screen's business.
+    val thisApp = protectionState.forComponentName(appSettingsRouteData.componentName)
+    // "Applied right now" — true only while this app is actually in the foreground.
+    val isCurrentlyApplied = thisApp != null
+    val protectionBusy = thisApp?.isBusy == true
 
     Scaffold(
         topBar = {
@@ -231,7 +457,15 @@ internal fun AppSettingsScreen(
         },
         bottomBar = {
             AppSettingsBottomAppBar(
-                onRefreshIconClick = onRevertAppSettings,
+                restoreEnabled = isCurrentlyApplied && !protectionBusy,
+                // Editing is only unsafe while the values are actually applied.
+                editingEnabled = !isCurrentlyApplied && !protectionBusy,
+                launchEnabled = !protectionBusy,
+                onRefreshIconClick = {
+                    thisApp?.sessionToken?.let { token ->
+                        onSetPersistentProtection(false, token)
+                    }
+                },
                 onSettingsIconClick = {
                     showAppSettingDialog = true
                 },
@@ -239,35 +473,75 @@ internal fun AppSettingsScreen(
                 onSettingsSuggestIconClick = {
                     showTemplateDialog = true
                 },
-                onFloatingActionButtonClick = onApplyAppSettings,
+                onFloatingActionButtonClick = onLaunchOnce,
             )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            when (appSettingsUiState) {
-                AppSettingsUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
+            ProtectionStatusItem(
+                app = thisApp,
+                // The switch reflects whether the profile is *armed*, which persists. Reading it from
+                // the session made it snap straight back off: a session exists only while the app is
+                // in the foreground, and arming deliberately creates none.
+                checked = isArmed,
+                isServiceRunning = isProtectionServiceRunning,
+                enabled = !protectionBusy,
+                onCheckedChange = { checked -> onSetPersistentProtection(checked, null) },
+            )
 
-                is AppSettingsUiState.Success -> {
-                    if (appSettingsUiState.appSettings.isNotEmpty()) {
-                        Success(
-                            appSettingsUiState = appSettingsUiState,
-                            onCheckAppSetting = onCheckAppSetting,
-                            onDeleteAppSettingsItem = onDeleteAppSetting,
-                        )
-                    } else {
-                        Empty(
-                            title = stringResource(R.string.no_settings_found),
-                            subtitle = stringResource(R.string.add_your_first_settings),
-                        )
+            if (
+                isArmed &&
+                thisApp?.status == ProtectionSessionStatus.ACTIVE &&
+                !isProtectionServiceRunning
+            ) {
+                TextButton(
+                    modifier = Modifier.align(Alignment.End),
+                    onClick = onResumeProtection,
+                ) {
+                    Text(stringResource(R.string.resume_background_protection))
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                when (appSettingsUiState) {
+                    AppSettingsUiState.Loading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+
+                    is AppSettingsUiState.Success -> {
+                        if (appSettingsUiState.appSettings.isNotEmpty()) {
+                            Success(
+                                appSettingsUiState = appSettingsUiState,
+                                editingEnabled = !isCurrentlyApplied,
+                                onCheckAppSetting = onCheckAppSetting,
+                                onDeleteAppSettingsItem = onDeleteAppSetting,
+                                onUndoDelete = { appSetting ->
+                                    coroutineScope.launch {
+                                        if (
+                                            snackbarHostState.showSnackbar(
+                                                message = deletedMessage,
+                                                actionLabel = undoLabel,
+                                                withDismissAction = true,
+                                            ) == SnackbarResult.ActionPerformed
+                                        ) {
+                                            onCheckAppSetting(appSetting)
+                                        }
+                                    }
+                                },
+                            )
+                        } else {
+                            Empty(
+                                title = stringResource(R.string.no_settings_found),
+                                subtitle = stringResource(R.string.add_your_first_settings),
+                            )
+                        }
                     }
                 }
             }
@@ -289,8 +563,7 @@ internal fun AppSettingsScreen(
     if (showTemplateDialog) {
         TemplateDialog(
             appSettingTemplates = appSettingTemplates,
-            componentName = appSettingsRouteData.componentName,
-            onAddAppSetting = onAddAppSetting,
+            onAddTemplate = onAddAppSettingTemplate,
             onDismissRequest = {
                 showTemplateDialog = false
             },
@@ -301,6 +574,35 @@ internal fun AppSettingsScreen(
         WriteSecureSettingsDialog(
             onDismissRequest = {
                 showWriteSecureSettingsDialog = false
+            },
+        )
+    }
+
+    // Sharing a key with another app is normal; only a contradictory value lands here, and it is
+    // reported before anything was written, so nothing needs undoing.
+    keyConflict?.let { conflict ->
+        val holder = conflict.holderComponentNames.firstOrNull()
+        val holderLabel = holder
+            ?.let { ComponentName.unflattenFromString(it)?.packageName ?: it }
+            ?: stringResource(R.string.another_app)
+        AlertDialog(
+            onDismissRequest = { keyConflict = null },
+            title = { Text(stringResource(R.string.key_conflict_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.key_conflict_message,
+                        holderLabel,
+                        conflict.key,
+                        conflict.enforcedValue,
+                        conflict.requestedValue,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { keyConflict = null }) {
+                    Text(stringResource(R.string.got_it))
+                }
             },
         )
     }
@@ -327,25 +629,24 @@ internal fun AppSettingsScreen(
     }
 }
 
-@OptIn(FlowPreview::class)
 @Composable
 private fun AppSettingsLaunchedEffects(
     appSettingsRouteData: AppSettingsRouteData,
     snackbarHostState: SnackbarHostState,
     activityIcon: ByteArray?,
     addAppSettingResult: AddAppSettingResult?,
-    applyAppSettingsResult: AppSettingsResult?,
-    revertAppSettingsResult: AppSettingsResult?,
+    protectionActionResult: ProtectionActionResult?,
     requestPinShortcutResult: RequestPinShortcutResult?,
     getPinShortcutResult: GetPinShortcutResult?,
     updatePinShortcutResult: UpdatePinShortcutResult?,
-    onResetApplyAppSettingsResult: () -> Unit,
-    onResetRevertAppSettingsResult: () -> Unit,
+    onResetProtectionActionResult: () -> Unit,
     onResetRequestPinShortcutResult: () -> Unit,
     onResetAddAppSettingResult: () -> Unit,
     onShowWriteSecureSettingsDialog: () -> Unit,
     onResetGetPinShortcutResult: () -> Unit,
     onResetUpdatePinShortcutResult: () -> Unit,
+    onKeyConflict: (ProtectionResult.KeyConflict) -> Unit,
+    onRestoreAfterLaunchFailure: (expectedSessionToken: String) -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -383,100 +684,132 @@ private fun AppSettingsLaunchedEffects(
     val appSettingAddSuccess = stringResource(R.string.app_setting_added_successfully)
 
     val appSettingAddFailed = stringResource(R.string.app_setting_already_exists)
+    val protectionActive = stringResource(R.string.protection_active)
+    val protectionInactive = stringResource(R.string.protection_inactive)
+    val launchFailed = stringResource(R.string.launch_failed)
+    val rollbackFailed = stringResource(R.string.settings_rollback_failed)
 
-    LaunchedEffect(key1 = applyAppSettingsResult) {
-        when (applyAppSettingsResult) {
-            AppSettingsResult.DisabledAppSettings -> {
-                snackbarHostState.showSnackbar(message = appSettingsDisabled)
+    LaunchedEffect(protectionActionResult) {
+        val actionResult = protectionActionResult ?: return@LaunchedEffect
 
-                onResetApplyAppSettingsResult()
+        // Consume the result before anything below suspends. Every branch here shows a snackbar,
+        // which suspends for its whole duration — clearing afterwards left the result live, so a
+        // rotation in that window re-ran this effect and launched the target app a second time.
+        onResetProtectionActionResult()
+
+        when (val result = actionResult.result) {
+            is ProtectionResult.Success -> when (actionResult.action) {
+                ProtectionAction.LAUNCH_ONCE -> {
+                    val activeApp = result.app
+                    if (activeApp?.mode == ProtectionMode.ONE_SHOT) {
+                        androidNotificationManagerWrapper.notify(
+                            id = ONE_SHOT_NOTIFICATION_ID,
+                            notification = getNotification(
+                                context = context,
+                                notificationId = ONE_SHOT_NOTIFICATION_ID,
+                                sessionToken = activeApp.sessionToken,
+                                componentName = appSettingsRouteData.componentName,
+                                icon = activityIcon,
+                                contentTitle = getoSettings,
+                                contentText = applySuccess,
+                            ),
+                        )
+                    }
+
+                    if (
+                        androidLauncherAppsWrapper.startMainActivity(
+                            componentName = appSettingsRouteData.componentName,
+                        ) !is LaunchResult.Success
+                    ) {
+                        if (activeApp?.mode == ProtectionMode.ONE_SHOT) {
+                            onRestoreAfterLaunchFailure(activeApp.sessionToken)
+                        }
+                        snackbarHostState.showSnackbar(message = launchFailed)
+                    }
+                }
+
+                ProtectionAction.ENABLE_PERSISTENT -> {
+                    androidNotificationManagerWrapper.cancel(ONE_SHOT_NOTIFICATION_ID)
+                    snackbarHostState.showSnackbar(message = protectionActive)
+                }
+
+                ProtectionAction.RESTORE -> {
+                    androidNotificationManagerWrapper.cancel(ONE_SHOT_NOTIFICATION_ID)
+                    snackbarHostState.showSnackbar(message = revertSuccess)
+                }
             }
 
-            AppSettingsResult.EmptyAppSettings -> {
+            ProtectionResult.EmptyProfile -> {
                 snackbarHostState.showSnackbar(message = emptyAppSettingsList)
-
-                onResetApplyAppSettingsResult()
             }
 
-            AppSettingsResult.Failure -> {
-                snackbarHostState.showSnackbar(message = applyFailure)
-
-                onResetApplyAppSettingsResult()
+            ProtectionResult.NoEnabledSettings -> {
+                snackbarHostState.showSnackbar(message = appSettingsDisabled)
             }
 
-            AppSettingsResult.NoPermission -> {
-                onShowWriteSecureSettingsDialog()
+            is ProtectionResult.PermissionDenied -> onShowWriteSecureSettingsDialog()
 
-                onResetApplyAppSettingsResult()
+            is ProtectionResult.InvalidProfile -> {
+                snackbarHostState.showSnackbar(message = invalidValues)
             }
 
-            AppSettingsResult.Success -> {
-                val notificationId = appSettingsRouteData.componentName.hashCode()
+            is ProtectionResult.KeyConflict -> onKeyConflict(result)
 
-                androidNotificationManagerWrapper.notify(
-                    id = notificationId,
-                    notification = getNotification(
-                        context = context,
-                        notificationId = notificationId,
-                        componentName = appSettingsRouteData.componentName,
-                        icon = activityIcon,
-                        contentTitle = getoSettings,
-                        contentText = applySuccess,
-                    ),
+            is ProtectionResult.RecoveryRequired -> {
+                if (
+                    result.failures.any { failure ->
+                        failure.reason == com.android.geto.domain.model.ProtectionFailureReason.PERMISSION_DENIED
+                    }
+                ) {
+                    onShowWriteSecureSettingsDialog()
+                }
+                if (
+                    actionResult.action == ProtectionAction.RESTORE &&
+                    result.app.mode == ProtectionMode.ONE_SHOT
+                ) {
+                    androidNotificationManagerWrapper.notify(
+                        id = ONE_SHOT_NOTIFICATION_ID,
+                        notification = getNotification(
+                            context = context,
+                            notificationId = ONE_SHOT_NOTIFICATION_ID,
+                            sessionToken = result.app.sessionToken,
+                            componentName = result.app.componentName,
+                            icon = activityIcon,
+                            contentTitle = getoSettings,
+                            contentText = rollbackFailed,
+                        ),
+                    )
+                }
+                snackbarHostState.showSnackbar(message = rollbackFailed)
+            }
+
+            ProtectionResult.NoActiveProtection -> {
+                if (actionResult.action == ProtectionAction.RESTORE) {
+                    snackbarHostState.showSnackbar(message = protectionInactive)
+                }
+            }
+
+            is ProtectionResult.Failure,
+            is ProtectionResult.KeyNotProtected,
+            -> {
+                snackbarHostState.showSnackbar(
+                    message = if (actionResult.action == ProtectionAction.RESTORE) {
+                        revertFailure
+                    } else {
+                        applyFailure
+                    },
                 )
-
-                androidLauncherAppsWrapper.startMainActivity(componentName = appSettingsRouteData.componentName)
-
-                onResetApplyAppSettingsResult()
             }
 
-            AppSettingsResult.InvalidValues -> {
-                snackbarHostState.showSnackbar(message = invalidValues)
-
-                onResetApplyAppSettingsResult()
+            else -> {
+                snackbarHostState.showSnackbar(
+                    message = if (actionResult.action == ProtectionAction.RESTORE) {
+                        revertFailure
+                    } else {
+                        applyFailure
+                    },
+                )
             }
-
-            null -> Unit
-        }
-    }
-
-    LaunchedEffect(key1 = revertAppSettingsResult) {
-        when (revertAppSettingsResult) {
-            AppSettingsResult.DisabledAppSettings -> {
-                snackbarHostState.showSnackbar(message = appSettingsDisabled)
-            }
-
-            AppSettingsResult.EmptyAppSettings -> {
-                snackbarHostState.showSnackbar(message = emptyAppSettingsList)
-
-                onResetRevertAppSettingsResult()
-            }
-
-            AppSettingsResult.Failure -> {
-                snackbarHostState.showSnackbar(message = revertFailure)
-
-                onResetRevertAppSettingsResult()
-            }
-
-            AppSettingsResult.NoPermission -> {
-                onShowWriteSecureSettingsDialog()
-
-                onResetRevertAppSettingsResult()
-            }
-
-            AppSettingsResult.Success -> {
-                snackbarHostState.showSnackbar(message = revertSuccess)
-
-                onResetRevertAppSettingsResult()
-            }
-
-            AppSettingsResult.InvalidValues -> {
-                snackbarHostState.showSnackbar(message = invalidValues)
-
-                onResetRevertAppSettingsResult()
-            }
-
-            null -> Unit
         }
     }
 
@@ -565,13 +898,17 @@ private fun AppSettingsTopAppBar(
     TopAppBar(
         modifier = modifier,
         title = {
-            Text(text = title, maxLines = 1)
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         },
         navigationIcon = {
             IconButton(onClick = onNavigationIconClick) {
                 Icon(
                     imageVector = GetoIcons.Back,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.back),
                 )
             }
         },
@@ -580,6 +917,9 @@ private fun AppSettingsTopAppBar(
 
 @Composable
 private fun AppSettingsBottomAppBar(
+    restoreEnabled: Boolean,
+    editingEnabled: Boolean,
+    launchEnabled: Boolean,
     onRefreshIconClick: () -> Unit,
     onSettingsIconClick: () -> Unit,
     onShortcutIconClick: () -> Unit,
@@ -589,6 +929,8 @@ private fun AppSettingsBottomAppBar(
     BottomAppBar(
         actions = {
             AppSettingsBottomAppBarActions(
+                restoreEnabled = restoreEnabled,
+                editingEnabled = editingEnabled,
                 onRefreshIconClick = onRefreshIconClick,
                 onSettingsIconClick = onSettingsIconClick,
                 onShortcutIconClick = onShortcutIconClick,
@@ -597,6 +939,7 @@ private fun AppSettingsBottomAppBar(
         },
         floatingActionButton = {
             AppSettingsFloatingActionButton(
+                enabled = launchEnabled,
                 onClick = onFloatingActionButtonClick,
             )
         },
@@ -604,37 +947,51 @@ private fun AppSettingsBottomAppBar(
 }
 
 @Composable
-private fun AppSettingsFloatingActionButton(onClick: () -> Unit) {
-    FloatingActionButton(
+private fun AppSettingsFloatingActionButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    FilledIconButton(
+        modifier = Modifier.size(56.dp),
+        enabled = enabled,
         onClick = onClick,
-        containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-        elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(),
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+        ),
     ) {
         Icon(
             imageVector = GetoIcons.ArrowForward,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.launch_once),
         )
     }
 }
 
 @Composable
 private fun AppSettingsBottomAppBarActions(
+    restoreEnabled: Boolean,
+    editingEnabled: Boolean,
     onRefreshIconClick: () -> Unit,
     onSettingsIconClick: () -> Unit,
     onShortcutIconClick: () -> Unit,
     onSettingsSuggestIconClick: () -> Unit,
 ) {
-    IconButton(onClick = onRefreshIconClick) {
+    IconButton(
+        enabled = restoreEnabled,
+        onClick = onRefreshIconClick,
+    ) {
         Icon(
             imageVector = GetoIcons.Refresh,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.restore_settings),
         )
     }
 
-    IconButton(onClick = onSettingsIconClick) {
+    IconButton(
+        enabled = editingEnabled,
+        onClick = onSettingsIconClick,
+    ) {
         Icon(
             GetoIcons.Settings,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.add_setting),
         )
     }
 
@@ -643,16 +1000,17 @@ private fun AppSettingsBottomAppBarActions(
     ) {
         Icon(
             GetoIcons.Shortcut,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.manage_shortcut),
         )
     }
 
     IconButton(
+        enabled = editingEnabled,
         onClick = onSettingsSuggestIconClick,
     ) {
         Icon(
             imageVector = GetoIcons.SettingsSuggest,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.add_template),
         )
     }
 }
@@ -689,13 +1047,16 @@ private fun Empty(
 private fun Success(
     modifier: Modifier = Modifier,
     appSettingsUiState: AppSettingsUiState.Success,
+    editingEnabled: Boolean,
     onCheckAppSetting: (AppSetting) -> Unit,
     onDeleteAppSettingsItem: (AppSetting) -> Unit,
+    onUndoDelete: (AppSetting) -> Unit,
 ) {
     LazyColumn(modifier = modifier) {
         items(items = appSettingsUiState.appSettings, key = { it.id }) { appSettings ->
             AppSettingItem(
                 appSetting = appSettings,
+                enabled = editingEnabled,
                 onCheckedChange = { check ->
                     onCheckAppSetting(
                         appSettings.copy(enabled = check),
@@ -703,6 +1064,7 @@ private fun Success(
                 },
                 onDeleteClick = {
                     onDeleteAppSettingsItem(appSettings)
+                    onUndoDelete(appSettings)
                 },
             )
         }
@@ -713,11 +1075,19 @@ private fun Success(
 private fun LazyItemScope.AppSettingItem(
     modifier: Modifier = Modifier,
     appSetting: AppSetting,
+    enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onDeleteClick: () -> Unit,
 ) {
     ListItem(
-        modifier = modifier.animateItem(),
+        modifier = modifier
+            .animateItem()
+            .toggleable(
+                value = appSetting.enabled,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange,
+            ),
         headlineContent = {
             Text(
                 text = appSetting.label,
@@ -736,16 +1106,85 @@ private fun LazyItemScope.AppSettingItem(
         leadingContent = {
             Checkbox(
                 checked = appSetting.enabled,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = null,
             )
         },
         trailingContent = {
-            IconButton(onClick = onDeleteClick) {
+            IconButton(
+                enabled = enabled,
+                onClick = onDeleteClick,
+            ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = null,
+                    contentDescription = stringResource(
+                        R.string.delete_named_setting,
+                        appSetting.label,
+                    ),
                 )
             }
+        },
+    )
+}
+
+@Composable
+private fun ProtectionStatusItem(
+    app: ProtectedApp?,
+    checked: Boolean,
+    isServiceRunning: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    // Every branch describes THIS app only. Previously a different app's Starting/Restoring/
+    // RecoveryRequired state leaked in here and made an unrelated screen look broken.
+    val status = when {
+        // Armed but not applied is the normal resting state: waiting for the app to be opened.
+        app == null && checked -> stringResource(R.string.protection_waiting)
+
+        app == null -> stringResource(R.string.protection_inactive)
+
+        app.status == ProtectionSessionStatus.STARTING ->
+            stringResource(R.string.protection_starting)
+
+        app.status == ProtectionSessionStatus.RESTORING ->
+            stringResource(R.string.protection_restoring)
+
+        app.status == ProtectionSessionStatus.RECOVERY_REQUIRED ->
+            stringResource(R.string.protection_recovery_required)
+
+        app.pause.isPaused -> stringResource(R.string.protection_paused_status)
+
+        app.mode == ProtectionMode.ONE_SHOT -> stringResource(R.string.one_shot_active)
+
+        else -> stringResource(R.string.protection_active)
+    }
+    val supportingText = when {
+        app == null -> stringResource(R.string.keep_profile_active_summary)
+
+        app.mode == ProtectionMode.FOREGROUND &&
+            app.status == ProtectionSessionStatus.ACTIVE &&
+            !isServiceRunning -> stringResource(R.string.background_protection_stopped)
+
+        else -> stringResource(R.string.turn_off_to_edit)
+    }
+
+    ListItem(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
+        headlineContent = { Text(stringResource(R.string.keep_profile_active)) },
+        overlineContent = { Text(status) },
+        supportingContent = { Text(supportingText) },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = null,
+            )
         },
     )
 }
@@ -753,6 +1192,7 @@ private fun LazyItemScope.AppSettingItem(
 private fun getNotification(
     context: Context,
     notificationId: Int,
+    sessionToken: String,
     componentName: String,
     icon: ByteArray?,
     contentTitle: String,
@@ -760,16 +1200,26 @@ private fun getNotification(
 ): Notification {
     val revertIntent = Intent(context, RevertSettingsBroadcastReceiver::class.java).apply {
         action = ACTION_REVERT_SETTINGS
+        data = "geto://restore/${Uri.encode(sessionToken)}".toUri()
         putExtra(NOTIFICATION_EXTRA_COMPONENT_NAME, componentName)
         putExtra(NOTIFICATION_EXTRA_NOTIFICATION_ID, notificationId)
+        putExtra(NOTIFICATION_EXTRA_SESSION_TOKEN, sessionToken)
     }
 
     val revertPendingIntent = PendingIntent.getBroadcast(
         context,
-        0,
+        sessionToken.hashCode(),
         revertIntent,
         FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE,
     )
+    val contentPendingIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+        PendingIntent.getActivity(
+            context,
+            notificationId,
+            it,
+            FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE,
+        )
+    }
 
     return NotificationCompat.Builder(
         context,
@@ -790,6 +1240,10 @@ private fun getNotification(
         setContentTitle(contentTitle)
         setContentText(contentText)
         setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        setCategory(NotificationCompat.CATEGORY_STATUS)
+        setOnlyAlertOnce(true)
+        setOngoing(true)
+        contentPendingIntent?.let(::setContentIntent)
         addAction(
             com.android.geto.framework.notificationmanager.R.drawable.baseline_settings_24,
             context.getString(com.android.geto.framework.notificationmanager.R.string.revert),
