@@ -17,18 +17,13 @@
  */
 package com.android.geto.domain.usecase
 
-import com.android.geto.domain.common.dispatcher.Dispatcher
-import com.android.geto.domain.common.dispatcher.GetoDispatchers
 import com.android.geto.domain.framework.ShortcutManagerCompatWrapper
 import com.android.geto.domain.model.RequestPinShortcutResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class RequestPinShortcutUseCase @Inject constructor(
-    private val shortcutManagerCompatWrapper: ShortcutManagerCompatWrapper,
-    @param:Dispatcher(GetoDispatchers.Default) private val defaultDispatcher: CoroutineDispatcher,
-) {
+class RequestPinShortcutUseCase @Inject constructor(private val shortcutManagerCompatWrapper: ShortcutManagerCompatWrapper) {
     suspend operator fun invoke(
         componentName: String,
         icon: ByteArray?,
@@ -40,8 +35,7 @@ class RequestPinShortcutUseCase @Inject constructor(
             return RequestPinShortcutResult.UnsupportedLauncher
         }
 
-        return withContext(defaultDispatcher) {
-            if (shortcutManagerCompatWrapper.requestPinShortcut(
+        return if (shortcutManagerCompatWrapper.requestPinShortcut(
                     componentName = componentName,
                     icon = icon,
                     id = id,
@@ -52,7 +46,6 @@ class RequestPinShortcutUseCase @Inject constructor(
                 RequestPinShortcutResult.SupportedLauncher
             } else {
                 RequestPinShortcutResult.UnsupportedLauncher
-            }
         }
     }
 }
