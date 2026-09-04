@@ -18,14 +18,31 @@
 package com.android.geto.domain.framework
 
 import com.android.geto.domain.model.SecureSetting
+import com.android.geto.domain.model.SettingReadResult
 import com.android.geto.domain.model.SettingType
+import com.android.geto.domain.model.SettingWriteResult
 
 interface SecureSettingsWrapper {
+    fun hasWriteSecureSettingsPermission(): Boolean
+
+    suspend fun read(
+        settingType: SettingType,
+        key: String,
+    ): SettingReadResult
+
+    /** Writes a nullable value and verifies the effective value by reading it back. */
+    suspend fun write(
+        settingType: SettingType,
+        key: String,
+        value: String?,
+    ): SettingWriteResult
+
+    @Deprecated("Use write(), which reports verification failures")
     suspend fun canWriteSecureSettings(
         settingType: SettingType,
         key: String,
         value: String,
-    ): Boolean
+    ): Boolean = write(settingType, key, value) is SettingWriteResult.Success
 
     suspend fun getSecureSettings(settingType: SettingType): List<SecureSetting>
 }

@@ -23,4 +23,7 @@ data class UserData(
     val sortLauncherAppsActivityInfo: SortLauncherAppsActivityInfo,
     val sortOrderLauncherAppsActivityInfo: SortOrderLauncherAppsActivityInfo,
     val showSystem: Boolean,
+    val autoRestartProtection: Boolean = false,
+    val grantMethod: GrantMethod = GrantMethod.ADB,
+    val protectionPausedUntilMillis: Long = 0L,
 )

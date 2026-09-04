@@ -20,6 +20,7 @@ package com.android.geto.data.room.di
 import android.content.Context
 import androidx.room.Room
 import com.android.geto.data.room.AppDatabase
+import com.android.geto.data.room.migration.Migration10To11
 import com.android.geto.data.room.migration.Migration1To2
 import com.android.geto.data.room.migration.Migration2To3
 import com.android.geto.data.room.migration.Migration3To4
@@ -27,6 +28,7 @@ import com.android.geto.data.room.migration.Migration4To5
 import com.android.geto.data.room.migration.Migration5To6
 import com.android.geto.data.room.migration.Migration6To7
 import com.android.geto.data.room.migration.Migration7To8
+import com.android.geto.data.room.migration.Migration9To10
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,5 +53,7 @@ internal object RoomModule {
         Migration5To6(),
         Migration6To7(),
         Migration7To8(),
+        Migration9To10(),
+        Migration10To11(),
     ).build()
 }

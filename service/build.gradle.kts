@@ -27,7 +27,16 @@ android {
 
 dependencies {
     implementation(projects.common)
+    implementation(projects.domain.framework)
+    implementation(projects.domain.model)
+    implementation(projects.domain.repository)
+    implementation(projects.domain.useCase)
     implementation(projects.framework.notificationManager)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

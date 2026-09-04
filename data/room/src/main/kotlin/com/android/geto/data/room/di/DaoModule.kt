@@ -19,6 +19,7 @@ package com.android.geto.data.room.di
 
 import com.android.geto.data.room.AppDatabase
 import com.android.geto.data.room.dao.AppSettingsDao
+import com.android.geto.data.room.dao.ProtectionDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,4 +33,8 @@ internal object DaoModule {
     @Provides
     @Singleton
     fun appSettingsDao(appDatabase: AppDatabase): AppSettingsDao = appDatabase.appSettingsDao()
+
+    @Provides
+    @Singleton
+    fun protectionDao(appDatabase: AppDatabase): ProtectionDao = appDatabase.protectionDao()
 }

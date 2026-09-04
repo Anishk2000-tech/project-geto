@@ -17,6 +17,7 @@
  */
 package com.android.geto.domain.repository
 
+import com.android.geto.domain.model.GrantMethod
 import com.android.geto.domain.model.SortLauncherAppsActivityInfo
 import com.android.geto.domain.model.SortOrderLauncherAppsActivityInfo
 import com.android.geto.domain.model.Theme
@@ -27,6 +28,8 @@ interface UserDataRepository {
 
     val userData: Flow<UserData>
 
+    val preferencesWereReset: Flow<Boolean>
+
     suspend fun updateTheme(theme: Theme)
 
     suspend fun updateDynamicTheme(dynamicTheme: Boolean)
@@ -36,4 +39,14 @@ interface UserDataRepository {
     suspend fun updateSortOrderLauncherAppsActivityInfo(sortOrderLauncherAppsActivityInfo: SortOrderLauncherAppsActivityInfo)
 
     suspend fun updateShowSystem(showSystem: Boolean)
+
+    suspend fun updateAutoRestartProtection(autoRestartProtection: Boolean)
+
+    suspend fun updateGrantMethod(grantMethod: GrantMethod)
+
+    suspend fun updateProtectionPausedUntil(protectionPausedUntilMillis: Long)
+
+    suspend fun resetUserPreferences()
+
+    fun acknowledgePreferencesReset()
 }

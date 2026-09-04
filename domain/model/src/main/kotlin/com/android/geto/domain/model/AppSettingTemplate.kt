@@ -17,10 +17,31 @@
  */
 package com.android.geto.domain.model
 
-data class AppSettingTemplate(
+data class AppSettingTemplateEntry(
     val settingType: SettingType,
     val label: String,
     val key: String,
     val valueOnLaunch: String,
+    /** Legacy/manual fallback only. Protection sessions restore captured original values. */
     val valueOnRevert: String,
 )
+
+data class AppSettingTemplate(
+    val id: String,
+    val label: String,
+    val description: String,
+    val warning: String? = null,
+    val entries: List<AppSettingTemplateEntry>,
+) {
+    fun toAppSettings(componentName: String): List<AppSetting> = entries.map { entry ->
+        AppSetting(
+            enabled = true,
+            settingType = entry.settingType,
+            componentName = componentName,
+            label = entry.label,
+            key = entry.key,
+            valueOnLaunch = entry.valueOnLaunch,
+            valueOnRevert = entry.valueOnRevert,
+        )
+    }
+}

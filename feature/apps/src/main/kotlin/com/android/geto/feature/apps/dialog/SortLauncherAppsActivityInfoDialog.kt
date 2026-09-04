@@ -17,7 +17,6 @@
  */
 package com.android.geto.feature.apps.dialog
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -38,11 +38,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.android.geto.designsystem.component.DialogContainer
 import com.android.geto.designsystem.theme.supportsDynamicTheming
@@ -62,19 +63,19 @@ internal fun SortLauncherAppsActivityInfoDialog(
     onUpdateSortOrderLauncherAppsActivityInfo: (SortOrderLauncherAppsActivityInfo) -> Unit,
     onUpdateShowSystem: (Boolean) -> Unit,
 ) {
-    var selectedSortLauncherAppsActivityInfoIndex by remember {
+    var selectedSortLauncherAppsActivityInfoIndex by rememberSaveable {
         mutableIntStateOf(
             SortLauncherAppsActivityInfo.entries.indexOf(sortLauncherAppsActivityInfo),
         )
     }
 
-    var selectedSortOrderLauncherAppsActivityInfoIndex by remember {
+    var selectedSortOrderLauncherAppsActivityInfoIndex by rememberSaveable {
         mutableIntStateOf(
             SortOrderLauncherAppsActivityInfo.entries.indexOf(sortOrderLauncherAppsActivityInfo),
         )
     }
 
-    var selectedShowSystem by remember { mutableStateOf(showSystem) }
+    var selectedShowSystem by rememberSaveable { mutableStateOf(showSystem) }
 
     DialogContainer(
         modifier = modifier.verticalScroll(rememberScrollState()),
@@ -87,7 +88,7 @@ internal fun SortLauncherAppsActivityInfoDialog(
         ) {
             Text(
                 modifier = Modifier.padding(10.dp),
-                text = stringResource(R.string.sort),
+                text = stringResource(R.string.sort_and_filter),
                 style = MaterialTheme.typography.titleLarge,
             )
 
@@ -133,6 +134,12 @@ private fun SortLauncherAppsActivityInfoDialogSelection(
     onUpdateSelectedSortLauncherAppsActivityInfoIndex: (Int) -> Unit,
     onUpdateSelectedSortOrderLauncherAppsActivityInfoIndex: (Int) -> Unit,
 ) {
+    Text(
+        modifier = Modifier.padding(bottom = 6.dp),
+        text = stringResource(R.string.sort_by),
+        style = MaterialTheme.typography.labelLarge,
+    )
+
     SingleChoiceSegmentedButtonRow {
         SortLauncherAppsActivityInfo.entries.forEachIndexed { index, sortLauncherAppsActivityInfo ->
             SegmentedButton(
@@ -149,6 +156,12 @@ private fun SortLauncherAppsActivityInfoDialogSelection(
     }
 
     Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+        modifier = Modifier.padding(bottom = 6.dp),
+        text = stringResource(R.string.order),
+        style = MaterialTheme.typography.labelLarge,
+    )
 
     SingleChoiceSegmentedButtonRow {
         SortOrderLauncherAppsActivityInfo.entries.forEachIndexed { index, sortOrderLauncherAppsActivityInfo ->
@@ -226,9 +239,11 @@ private fun ShowSystemSetting(
 
     Row(
         modifier = modifier
-            .clickable {
-                onUpdateShowSystem(!showSystem)
-            }
+            .toggleable(
+                value = showSystem,
+                role = Role.Switch,
+                onValueChange = onUpdateShowSystem,
+            )
             .fillMaxWidth()
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -249,7 +264,7 @@ private fun ShowSystemSetting(
 
         Switch(
             checked = showSystem,
-            onCheckedChange = onUpdateShowSystem,
+            onCheckedChange = null,
         )
     }
 }

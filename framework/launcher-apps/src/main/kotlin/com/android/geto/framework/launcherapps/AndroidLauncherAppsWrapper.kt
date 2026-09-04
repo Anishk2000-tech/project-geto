@@ -18,5 +18,15 @@
 package com.android.geto.framework.launcherapps
 
 interface AndroidLauncherAppsWrapper {
-    fun startMainActivity(componentName: String)
+    fun startMainActivity(componentName: String): LaunchResult
+}
+
+sealed interface LaunchResult {
+    data object Success : LaunchResult
+
+    data object InvalidComponent : LaunchResult
+
+    data object NotFoundOrUnavailable : LaunchResult
+
+    data object SecurityFailure : LaunchResult
 }

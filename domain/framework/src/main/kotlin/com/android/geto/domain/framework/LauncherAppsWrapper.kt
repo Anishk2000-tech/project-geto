@@ -21,5 +21,8 @@ import com.android.geto.domain.model.LauncherAppsActivityInfo
 import kotlinx.coroutines.flow.Flow
 
 interface LauncherAppsWrapper {
-    fun getActivityListFlow(): Flow<List<LauncherAppsActivityInfo>>
+    fun getActivityListFlow(): Flow<Result<List<LauncherAppsActivityInfo>>>
+
+    /** Rebuilds the cached launcher metadata snapshot. */
+    fun refresh()
 }

@@ -70,14 +70,16 @@ dependencies {
 
     implementation(projects.framework.assetManager)
     implementation(projects.framework.drawable)
+    implementation(projects.framework.foregroundApp)
     implementation(projects.framework.launcherApps)
     implementation(projects.framework.notificationManager)
     implementation(projects.framework.packageManager)
     implementation(projects.framework.secureSettings)
+    implementation(projects.framework.shizuku)
     implementation(projects.framework.shortcutManager)
+    implementation(projects.service)
     implementation(projects.ui)
 
-    implementation(libs.accompanist.permissions)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)

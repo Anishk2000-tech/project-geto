@@ -17,6 +17,7 @@
  */
 package com.android.geto.framework.packagemanager
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -50,7 +51,7 @@ internal class DefaultPackageManagerWrapper @Inject constructor(
         }
     }
 
-    override suspend fun getLastInstallTime(packageName: String): Long = withContext(ioDispatcher) {
+    override suspend fun getLastUpdateTime(packageName: String): Long = withContext(ioDispatcher) {
         val packageInfo = try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageInfo(
@@ -65,6 +66,22 @@ internal class DefaultPackageManagerWrapper @Inject constructor(
         }
 
         packageInfo?.lastUpdateTime ?: 0L
+    }
+
+    @SuppressLint("QueryPermissionsNeeded")
+    override suspend fun getLastUpdateTimes(packageNames: Set<String>): Map<String, Long> = withContext(ioDispatcher) {
+        if (packageNames.isEmpty()) return@withContext emptyMap()
+
+        val packageInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getInstalledPackages(0)
+        }
+
+        packageInfos.asSequence()
+            .filter { it.packageName in packageNames }
+            .associate { it.packageName to it.lastUpdateTime }
     }
 
     override fun isSystem(flags: Int): Boolean = (flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0

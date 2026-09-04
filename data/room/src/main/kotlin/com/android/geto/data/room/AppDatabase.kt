@@ -21,16 +21,27 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.android.geto.data.room.dao.AppSettingsDao
+import com.android.geto.data.room.dao.ProtectionDao
 import com.android.geto.data.room.migration.AutoMigrationSpec1To2
 import com.android.geto.data.room.migration.AutoMigrationSpec4To5
 import com.android.geto.data.room.migration.AutoMigrationSpec5To6
 import com.android.geto.data.room.migration.AutoMigrationSpec6To7
 import com.android.geto.data.room.migration.AutoMigrationSpec8To9
 import com.android.geto.data.room.model.AppSettingEntity
+import com.android.geto.data.room.model.ArmedProfileEntity
+import com.android.geto.data.room.model.ProtectedKeyEntity
+import com.android.geto.data.room.model.ProtectionSessionEntity
+import com.android.geto.data.room.model.ProtectionValueEntity
 
 @Database(
-    entities = [AppSettingEntity::class],
-    version = 9,
+    entities = [
+        AppSettingEntity::class,
+        ArmedProfileEntity::class,
+        ProtectedKeyEntity::class,
+        ProtectionSessionEntity::class,
+        ProtectionValueEntity::class,
+    ],
+    version = 11,
     autoMigrations = [
         AutoMigration(
             from = 1,
@@ -63,6 +74,8 @@ import com.android.geto.data.room.model.AppSettingEntity
 internal abstract class AppDatabase : RoomDatabase() {
 
     abstract fun appSettingsDao(): AppSettingsDao
+
+    abstract fun protectionDao(): ProtectionDao
 
     companion object {
         const val DATABASE_NAME = "Geto.db"

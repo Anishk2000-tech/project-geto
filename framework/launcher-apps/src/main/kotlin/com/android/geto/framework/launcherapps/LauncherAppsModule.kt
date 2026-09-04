@@ -17,21 +17,44 @@
  */
 package com.android.geto.framework.launcherapps
 
+import android.content.Context
+import coil.ImageLoader
+import com.android.geto.domain.common.dispatcher.Dispatcher
+import com.android.geto.domain.common.dispatcher.GetoDispatchers.IO
 import com.android.geto.domain.framework.LauncherAppsWrapper
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface LauncherAppsModule {
     @Binds
-    @Singleton
     fun launcherAppsWrapper(impl: DefaultLauncherAppsWrapper): LauncherAppsWrapper
 
     @Binds
-    @Singleton
     fun androidLauncherAppsWrapper(impl: DefaultLauncherAppsWrapper): AndroidLauncherAppsWrapper
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal object LauncherAppsImageModule {
+    @Provides
+    @Singleton
+    fun imageLoader(
+        @ApplicationContext context: Context,
+        @Dispatcher(IO) ioDispatcher: CoroutineDispatcher,
+    ): ImageLoader = ImageLoader.Builder(context)
+        .fetcherDispatcher(ioDispatcher)
+        .components {
+            add(LauncherAppIconKeyer())
+            add(LauncherAppIconFetcher.Factory(context))
+        }
+        .crossfade(true)
+        .build()
 }

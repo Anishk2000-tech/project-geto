@@ -23,7 +23,6 @@ import com.android.geto.domain.common.dispatcher.GetoDispatchers.IO
 import com.android.geto.domain.framework.AssetManagerWrapper
 import com.android.geto.domain.model.AppSettingTemplate
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -50,8 +49,15 @@ internal class DefaultAssetManagerWrapper @Inject constructor(
         }
 
         try {
-            Gson().fromJson(jsonString, appSettingsType) ?: emptyList()
-        } catch (_: JsonSyntaxException) {
+            val templates: List<AppSettingTemplate> =
+                Gson().fromJson(jsonString, appSettingsType) ?: emptyList()
+            templates.filter { template ->
+                template.id.isNotBlank() &&
+                    template.label.isNotBlank() &&
+                    template.entries.isNotEmpty() &&
+                    template.entries.all { entry -> entry.key.isNotBlank() }
+            }
+        } catch (_: RuntimeException) {
             emptyList()
         }
     }

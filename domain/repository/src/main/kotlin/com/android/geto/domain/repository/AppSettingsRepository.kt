@@ -26,6 +26,8 @@ interface AppSettingsRepository {
 
     suspend fun upsertAppSetting(appSetting: AppSetting)
 
+    suspend fun upsertAppSettings(appSettings: List<AppSetting>)
+
     suspend fun deleteAppSetting(appSetting: AppSetting)
 
     fun getAppSettingsFlowByComponentName(componentName: String): Flow<List<AppSetting>>

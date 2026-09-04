@@ -16,8 +16,38 @@
   ~
   -->
 <resources>
-    <string name="settings_observer">Settings Observer</string>
-    <string name="waiting_for_changes">Waiting for changes…</string>
-    <string name="unknown">Unknown</string>
-    <string name="stop">Stop</string>
+    <string name="protection_active">Protection active</string>
+    <string name="starting_protection">Starting protection…</string>
+    <string name="protecting_profile">Protecting %1$s</string>
+    <string name="stop_and_restore">Stop &amp; restore</string>
+    <string name="protection_paused">Protection paused</string>
+    <string name="paused_resumes_at">%1$s — resumes at %2$s</string>
+    <string name="paused_until_resumed">%1$s — paused until you resume it</string>
+    <string name="pause_for_thirty_minutes">Pause 30m</string>
+    <string name="resume_now">Resume now</string>
+    <string name="manage_protection">Manage</string>
+    <string name="app_needs_attention">%1$s — needs attention</string>
+    <string name="protecting_apps_with_paused">Protecting %1$d apps · %2$d paused</string>
+    <plurals name="protecting_apps">
+        <item quantity="one">Protecting %1$d app</item>
+        <item quantity="other">Protecting %1$d apps</item>
+    </plurals>
+    <string name="protection_interrupted">Protection was interrupted</string>
+    <string name="protection_restarted">Protection has restarted.</string>
+    <string name="protection_restarted_for">Protection for %1$s has restarted.</string>
+    <string name="open_geto_to_check_protection">Open Geto to check whether protection is still running.</string>
+    <string name="open_geto_to_check_profile">Open Geto to check protection for %1$s.</string>
+    <string name="protection_needs_attention">Protection needs attention</string>
+    <string name="open_geto_to_recover">Open Geto to review and recover protection.</string>
+    <string name="open_geto_to_recover_profile">Open Geto to review and recover protection for %1$s.</string>
+    <string name="open_geto_to_resume_protection">Android prevented background recovery. Open Geto to resume protection.</string>
+    <string name="protection_timed_out">Android stopped the protection service. Open Geto to recover it.</string>
+    <string name="one_shot_restore_required">%1$s still has one-time settings applied. Open Geto to restore them.</string>
+    <string name="protection_manager_failed">Protection could not restart automatically. Open Geto to review it.</string>
+    <string name="protection_stopped_repeated_failures">Protection stopped after repeated failures. Open Geto to restart it.</string>
+    <string name="protection_blocked_by_notifications">Protection can\'t start while its notification is turned off. Enable it in Android settings.</string>
+    <string name="setting_cannot_be_watched">Android would not let Geto watch %1$s, so changes to it will not be repaired.</string>
+    <string name="apply_failed_key">Could not apply %1$s. Its settings were left unchanged.</string>
+    <string name="apply_failed_permission">Geto needs Write Secure Settings before it can apply this profile.</string>
+    <string name="apply_failed_generic">Could not apply this profile. Its settings were left unchanged.</string>
 </resources>

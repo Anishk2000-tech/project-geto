@@ -17,6 +17,8 @@
  */
 package com.android.geto.feature.appsettings.dialog
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,9 @@ internal fun WriteSecureSettingsDialog(
     modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val command = "pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS"
+
     DialogContainer(
         modifier = modifier.verticalScroll(rememberScrollState()),
         content = {
@@ -63,7 +69,7 @@ internal fun WriteSecureSettingsDialog(
                 SelectionContainer {
                     Text(
                         modifier = Modifier.padding(15.dp),
-                        text = "pm grant com.android.geto android.permission.WRITE_SECURE_SETTINGS",
+                        text = command,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontStyle = FontStyle.Italic,
                         ),
@@ -74,8 +80,16 @@ internal fun WriteSecureSettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
+                    TextButton(
+                        onClick = {
+                            context.getSystemService(ClipboardManager::class.java)
+                                .setPrimaryClip(ClipData.newPlainText("ADB command", command))
+                        },
+                    ) {
+                        Text(text = stringResource(R.string.copy))
+                    }
                     TextButton(onClick = onDismissRequest) {
-                        Text(text = "Okay")
+                        Text(text = stringResource(R.string.okay))
                     }
                 }
             }

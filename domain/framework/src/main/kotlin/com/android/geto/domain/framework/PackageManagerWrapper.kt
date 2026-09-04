@@ -20,7 +20,9 @@ package com.android.geto.domain.framework
 interface PackageManagerWrapper {
     suspend fun getActivityIcon(componentName: String): ByteArray?
 
-    suspend fun getLastInstallTime(packageName: String): Long
+    suspend fun getLastUpdateTime(packageName: String): Long
+
+    suspend fun getLastUpdateTimes(packageNames: Set<String>): Map<String, Long>
 
     fun isSystem(flags: Int): Boolean
 }

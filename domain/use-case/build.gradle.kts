@@ -26,4 +26,7 @@ dependencies {
     implementation(projects.domain.common)
     implementation(projects.domain.framework)
     implementation(projects.domain.repository)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -21,6 +21,8 @@ import android.app.Application
 import android.app.NotificationManager
 import android.os.Build
 import com.android.geto.framework.notificationmanager.AndroidNotificationManagerWrapper
+import com.android.geto.service.ForegroundProtectionCoordinator
+import com.android.geto.service.ProtectionServiceManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -28,6 +30,12 @@ import javax.inject.Inject
 class GetoApplication : Application() {
     @Inject
     lateinit var notificationManagerWrapper: AndroidNotificationManagerWrapper
+
+    @Inject
+    lateinit var protectionServiceManager: ProtectionServiceManager
+
+    @Inject
+    lateinit var foregroundProtectionCoordinator: ForegroundProtectionCoordinator
 
     override fun onCreate() {
         super.onCreate()
@@ -38,6 +46,29 @@ class GetoApplication : Application() {
                 name = getString(R.string.app_name),
                 importance = NotificationManager.IMPORTANCE_DEFAULT,
             )
+
+            notificationManagerWrapper.createNotificationChannel(
+                channelId = AndroidNotificationManagerWrapper.PROTECTION_NOTIFICATION_CHANNEL_ID,
+                name = getString(com.android.geto.framework.notificationmanager.R.string.protection_channel_name),
+                importance = NotificationManager.IMPORTANCE_LOW,
+                description = getString(
+                    com.android.geto.framework.notificationmanager.R.string.protection_channel_description,
+                ),
+            )
+
+            notificationManagerWrapper.createNotificationChannel(
+                channelId = AndroidNotificationManagerWrapper.PROTECTION_ALERT_CHANNEL_ID,
+                name = getString(com.android.geto.framework.notificationmanager.R.string.protection_alert_channel_name),
+                importance = NotificationManager.IMPORTANCE_DEFAULT,
+                description = getString(
+                    com.android.geto.framework.notificationmanager.R.string.protection_alert_channel_description,
+                ),
+            )
         }
+
+        protectionServiceManager.initialize()
+        // Restores anything left applied by a previous process before it starts watching, so a
+        // profile can never outlive the run that applied it.
+        foregroundProtectionCoordinator.initialize()
     }
 }

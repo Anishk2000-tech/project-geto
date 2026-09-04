@@ -18,12 +18,20 @@ Apply device settings to your apps
 About The Project
 ==================
 
-The only reason I created this app is to turn off that damn Developer Options when using a banking
-app. The only annoying thing about it is you have to go to the Settings app. When you turn off that
-switch button, your Developer Options configurations will be reset to default. The good thing is
-that when you modify your settings through its Shared Preferences, you won't lose all your settings
-once the Developer Options is modified. So basically, you have to grant this app
-with `android.permission.WRITE_SECURE_SETTINGS` in order for it to modify your Settings values.
+Geto applies a saved Android-settings profile before opening an app—for example, temporarily hiding
+Developer Options from a banking app. Geto needs `android.permission.WRITE_SECURE_SETTINGS` to read
+and update those values. Grant it from **Settings → Permission**, either with Shizuku on the device
+itself or by copying the ADB command and running it from a connected computer.
+
+Use **Launch once** for temporary changes. Geto snapshots the real original values, applies the
+profile as one recoverable transaction, and keeps a Restore notification until the originals are
+verified. Use **Keep profile active** when the target must also work from its original launcher icon.
+In that mode a lightweight foreground service watches only the selected setting keys and repairs
+drift without polling or holding a wake lock.
+
+Settings includes an optional **Restart protection automatically** control for unexpected service
+stops, reboots, and app updates. It is off by default to avoid background work unless the user opts
+in. Geto reports interrupted or incomplete recovery through its protection notifications.
 
 > [!IMPORTANT]  
 > Watch the tutorial on [YouTube](https://youtu.be/CJrJyHpVVRM?si=ACrEC0hcPed53RAj)

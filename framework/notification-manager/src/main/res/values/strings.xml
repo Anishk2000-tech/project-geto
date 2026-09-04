@@ -17,4 +17,8 @@
   -->
 <resources>
     <string name="revert">Revert</string>
+    <string name="protection_channel_name">Protection status</string>
+    <string name="protection_channel_description">Shows when an app profile is being kept active.</string>
+    <string name="protection_alert_channel_name">Protection alerts</string>
+    <string name="protection_alert_channel_description">Warns when protection is interrupted or needs attention.</string>
 </resources>

@@ -18,6 +18,8 @@
 package com.android.geto.data.datastore
 
 import androidx.datastore.core.DataStore
+import com.android.geto.data.datastore.mapper.asGrantMethod
+import com.android.geto.data.datastore.mapper.asGrantMethodProto
 import com.android.geto.data.datastore.mapper.asSortLauncherAppsActivityInfo
 import com.android.geto.data.datastore.mapper.asSortLauncherAppsActivityInfoProto
 import com.android.geto.data.datastore.mapper.asSortOrderLauncherAppsActivityInfo
@@ -26,6 +28,7 @@ import com.android.geto.data.datastore.mapper.asTheme
 import com.android.geto.data.datastore.mapper.asThemeProto
 import com.android.geto.data.datastore.proto.UserPreferences
 import com.android.geto.data.datastore.proto.copy
+import com.android.geto.domain.model.GrantMethod
 import com.android.geto.domain.model.SortLauncherAppsActivityInfo
 import com.android.geto.domain.model.SortOrderLauncherAppsActivityInfo
 import com.android.geto.domain.model.Theme
@@ -33,7 +36,14 @@ import com.android.geto.domain.model.UserData
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-class UserPreferencesDataSource @Inject constructor(private val userPreferences: DataStore<UserPreferences>) {
+class UserPreferencesDataSource @Inject constructor(
+    private val userPreferences: DataStore<UserPreferences>,
+    recoveryTracker: UserPreferencesRecoveryTracker,
+) {
+    val preferencesWereReset = recoveryTracker.preferencesWereReset
+
+    private val preferencesRecoveryTracker = recoveryTracker
+
     val userData = userPreferences.data.map {
         UserData(
             theme = it.theme.asTheme(),
@@ -41,6 +51,9 @@ class UserPreferencesDataSource @Inject constructor(private val userPreferences:
             sortLauncherAppsActivityInfo = it.sortLauncherAppsActivityInfo.asSortLauncherAppsActivityInfo(),
             sortOrderLauncherAppsActivityInfo = it.sortOrderLauncherAppsActivityInfo.asSortOrderLauncherAppsActivityInfo(),
             showSystem = it.showSystem,
+            autoRestartProtection = it.autoRestartProtection,
+            grantMethod = it.grantMethod.asGrantMethod(),
+            protectionPausedUntilMillis = it.protectionPausedUntilMillis,
         )
     }
 
@@ -82,5 +95,37 @@ class UserPreferencesDataSource @Inject constructor(private val userPreferences:
                 this.showSystem = showSystem
             }
         }
+    }
+
+    suspend fun updateAutoRestartProtection(autoRestartProtection: Boolean) {
+        userPreferences.updateData {
+            it.copy {
+                this.autoRestartProtection = autoRestartProtection
+            }
+        }
+    }
+
+    suspend fun updateGrantMethod(grantMethod: GrantMethod) {
+        userPreferences.updateData {
+            it.copy {
+                this.grantMethod = grantMethod.asGrantMethodProto()
+            }
+        }
+    }
+
+    suspend fun updateProtectionPausedUntil(protectionPausedUntilMillis: Long) {
+        userPreferences.updateData {
+            it.copy {
+                this.protectionPausedUntilMillis = protectionPausedUntilMillis
+            }
+        }
+    }
+
+    suspend fun resetUserPreferences() {
+        userPreferences.updateData { UserPreferences.getDefaultInstance() }
+    }
+
+    fun acknowledgePreferencesReset() {
+        preferencesRecoveryTracker.acknowledgeRecovery()
     }
 }

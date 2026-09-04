@@ -17,6 +17,7 @@
  */
 package com.android.geto.feature.settings.navigation
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
@@ -33,8 +34,8 @@ fun NavController.navigateToSettings() {
     }
 }
 
-fun NavGraphBuilder.settingsScreen() {
+fun NavGraphBuilder.settingsScreen(snackbarHostState: SnackbarHostState) {
     composable<SettingsRouteData> {
-        SettingsRoute()
+        SettingsRoute(snackbarHostState = snackbarHostState)
     }
 }
