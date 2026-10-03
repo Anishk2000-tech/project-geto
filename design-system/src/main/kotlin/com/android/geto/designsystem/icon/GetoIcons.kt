@@ -26,11 +26,14 @@ import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.AppShortcut
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Filter
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 
 object GetoIcons {
     val Apps = Icons.Default.Apps
@@ -44,4 +47,7 @@ object GetoIcons {
     val ArrowForward = Icons.AutoMirrored.Filled.ArrowForward
     val Search = Icons.Default.Search
     val Sort = Icons.AutoMirrored.Filled.Sort
+    val MoreVert = Icons.Default.MoreVert
+    val Visibility = Icons.Default.Visibility
+    val VisibilityOff = Icons.Default.VisibilityOff
 }
