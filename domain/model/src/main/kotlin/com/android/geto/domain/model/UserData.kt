@@ -23,6 +23,4 @@ data class UserData(
     val sortLauncherAppsActivityInfo: SortLauncherAppsActivityInfo,
     val sortOrderLauncherAppsActivityInfo: SortOrderLauncherAppsActivityInfo,
     val showSystem: Boolean,
-    val hiddenApps: Set<String>,
-    val showHidden: Boolean,
 )

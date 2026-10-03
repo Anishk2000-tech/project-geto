@@ -69,34 +69,4 @@ class AppsViewModel @Inject constructor(
             userDataRepository.updateShowSystem(showSystem = showSystem)
         }
     }
-
-    fun updateShowHidden(showHidden: Boolean) {
-        viewModelScope.launch {
-            userDataRepository.updateShowHidden(showHidden = showHidden)
-        }
-    }
-
-    fun hideApp(packageName: String) {
-        viewModelScope.launch {
-            userDataRepository.hideApp(packageName = packageName)
-        }
-    }
-
-    fun unhideApp(packageName: String) {
-        viewModelScope.launch {
-            userDataRepository.unhideApp(packageName = packageName)
-        }
-    }
-
-    fun hideApps(packageNames: Collection<String>) {
-        viewModelScope.launch {
-            userDataRepository.hideApps(packageNames = packageNames)
-        }
-    }
-
-    fun unhideAllApps() {
-        viewModelScope.launch {
-            userDataRepository.unhideAllApps()
-        }
-    }
 }

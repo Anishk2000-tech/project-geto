@@ -22,4 +22,5 @@
     <string name="system">System</string>
     <string name="secure">Secure</string>
     <string name="global">Global</string>
+    <string name="package_type">Package</string>
 </resources>

@@ -74,6 +74,7 @@ dependencies {
     implementation(projects.framework.notificationManager)
     implementation(projects.framework.packageManager)
     implementation(projects.framework.secureSettings)
+    implementation(projects.framework.shizuku)
     implementation(projects.framework.shortcutManager)
     implementation(projects.ui)
 

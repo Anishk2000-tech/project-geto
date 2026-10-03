@@ -36,14 +36,4 @@ interface UserDataRepository {
     suspend fun updateSortOrderLauncherAppsActivityInfo(sortOrderLauncherAppsActivityInfo: SortOrderLauncherAppsActivityInfo)
 
     suspend fun updateShowSystem(showSystem: Boolean)
-
-    suspend fun updateShowHidden(showHidden: Boolean)
-
-    suspend fun hideApp(packageName: String)
-
-    suspend fun unhideApp(packageName: String)
-
-    suspend fun hideApps(packageNames: Collection<String>)
-
-    suspend fun unhideAllApps()
 }

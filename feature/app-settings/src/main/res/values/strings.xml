@@ -53,4 +53,8 @@
     <string name="app_setting_added_successfully">App setting added successfully</string>
     <string name="no_permission">Please grant the WRITE_SECURE_SETTINGS permission via ADB</string>
     <string name="write_secure_settings_message">Copy the command below and run it via ADB to grant the Write Secure Settings permission</string>
+    <string name="hide_all_apps">Hide All Apps</string>
+    <string name="hide_all_apps_description">Hide every other app while this app is open (requires Shizuku)</string>
+    <string name="hide_selected_apps">Hide Selected Apps</string>
+    <string name="hide_selected_apps_description">Pick apps to hide while this app is open (requires Shizuku)</string>
 </resources>

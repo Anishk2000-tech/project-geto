@@ -27,6 +27,7 @@ import com.android.geto.domain.framework.SecureSettingsWrapper
 import com.android.geto.domain.model.SecureSetting
 import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.model.SettingType.GLOBAL
+import com.android.geto.domain.model.SettingType.PACKAGE
 import com.android.geto.domain.model.SettingType.SECURE
 import com.android.geto.domain.model.SettingType.SYSTEM
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -70,6 +71,8 @@ internal class DefaultSecureSettingsWrapper @Inject constructor(
                 key,
                 value,
             )
+
+            PACKAGE -> false
         }
     }
 
@@ -98,6 +101,8 @@ internal class DefaultSecureSettingsWrapper @Inject constructor(
                 null,
                 null,
             )
+
+            PACKAGE -> null
         }
 
         cursor?.use {

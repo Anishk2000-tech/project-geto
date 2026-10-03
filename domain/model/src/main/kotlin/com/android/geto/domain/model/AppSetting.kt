@@ -32,4 +32,5 @@ enum class SettingType {
     SYSTEM,
     SECURE,
     GLOBAL,
+    PACKAGE,
 }

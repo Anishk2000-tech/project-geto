@@ -15,15 +15,19 @@
   ~   limitations under the License.
   ~
   -->
-<resources>
-    <string name="search">Search</string>
-    <string name="sort">Sort</string>
-    <string name="sort_order">Sort Order</string>
-    <string name="name">Name</string>
-    <string name="update_time">Update</string>
-    <string name="install_time">Install</string>
-    <string name="ascending">Ascending</string>
-    <string name="descending">Descending</string>
-    <string name="show_system">Show System</string>
-    <string name="show_system_applications">Show system applications</string>
-</resources>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <application>
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:ignore="ExportedContentProvider" />
+    </application>
+</manifest>

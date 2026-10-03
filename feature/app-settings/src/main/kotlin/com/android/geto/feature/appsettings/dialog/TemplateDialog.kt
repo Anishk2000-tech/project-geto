@@ -47,6 +47,8 @@ internal fun TemplateDialog(
     appSettingTemplates: List<AppSettingTemplate>,
     componentName: String,
     onAddAppSetting: (AppSetting) -> Unit,
+    onHideAllApps: () -> Unit,
+    onHideSelectedApps: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     DialogContainer(
@@ -73,7 +75,63 @@ internal fun TemplateDialog(
                         onDismissRequest = onDismissRequest,
                     )
                 }
+
+                item {
+                    HideAppsTemplateItem(
+                        label = stringResource(id = R.string.hide_selected_apps),
+                        description = stringResource(id = R.string.hide_selected_apps_description),
+                        onClick = {
+                            onHideSelectedApps()
+                            onDismissRequest()
+                        },
+                    )
+                }
+
+                item {
+                    HideAppsTemplateItem(
+                        label = stringResource(id = R.string.hide_all_apps),
+                        description = stringResource(id = R.string.hide_all_apps_description),
+                        onClick = {
+                            onHideAllApps()
+                            onDismissRequest()
+                        },
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun HideAppsTemplateItem(
+    modifier: Modifier = Modifier,
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = modifier.padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = GetoIcons.Add,
+                contentDescription = null,
+            )
         }
     }
 }

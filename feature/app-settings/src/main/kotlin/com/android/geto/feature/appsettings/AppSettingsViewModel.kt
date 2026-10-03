@@ -17,11 +17,13 @@
  */
 package com.android.geto.feature.appsettings
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.android.geto.domain.framework.AssetManagerWrapper
+import com.android.geto.domain.framework.LauncherAppsWrapper
 import com.android.geto.domain.framework.PackageManagerWrapper
 import com.android.geto.domain.framework.ShortcutManagerCompatWrapper
 import com.android.geto.domain.model.AddAppSettingResult
@@ -29,6 +31,7 @@ import com.android.geto.domain.model.AppSetting
 import com.android.geto.domain.model.AppSettingTemplate
 import com.android.geto.domain.model.AppSettingsResult
 import com.android.geto.domain.model.GetPinShortcutResult
+import com.android.geto.domain.model.LauncherAppsActivityInfo
 import com.android.geto.domain.model.RequestPinShortcutResult
 import com.android.geto.domain.model.SecureSetting
 import com.android.geto.domain.model.SettingType
@@ -43,9 +46,11 @@ import com.android.geto.domain.usecase.RevertAppSettingsUseCase
 import com.android.geto.domain.usecase.UpdatePinShortcutUseCase
 import com.android.geto.feature.appsettings.navigation.AppSettingsRouteData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -56,8 +61,10 @@ import javax.inject.Inject
 @HiltViewModel
 class AppSettingsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @param:ApplicationContext private val context: Context,
     private val appSettingsRepository: AppSettingsRepository,
     private val packageManagerWrapper: PackageManagerWrapper,
+    private val launcherAppsWrapper: LauncherAppsWrapper,
     private val applyAppSettingsUseCase: ApplyAppSettingsUseCase,
     private val revertAppSettingsUseCase: RevertAppSettingsUseCase,
     private val requestPinShortcutUseCase: RequestPinShortcutUseCase,
@@ -71,6 +78,8 @@ class AppSettingsViewModel @Inject constructor(
     private val appSettingsRouteData = savedStateHandle.toRoute<AppSettingsRouteData>()
 
     private val componentName = appSettingsRouteData.componentName
+
+    private val selectedPackageName = componentName.substringBefore(delimiter = "/")
 
     private var _secureSettings = MutableStateFlow<List<SecureSetting>>(emptyList())
     val secureSettings = _secureSettings.asStateFlow()
@@ -108,6 +117,12 @@ class AppSettingsViewModel @Inject constructor(
     val appSettingTemplates = _appSettingTemplates.onStart {
         getAppSettingTemplates()
     }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList(),
+    )
+
+    val installedApps = launcherAppsWrapper.getActivityListFlow().map(::hideableApps).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
@@ -193,6 +208,46 @@ class AppSettingsViewModel @Inject constructor(
             }
         }
     }
+
+    fun hideAllApps(label: String) {
+        viewModelScope.launch {
+            val packageNames = hideableApps(launcherAppsWrapper.getActivityListFlow().first())
+                .map { it.packageName }
+
+            addHidePackagesAppSetting(label = label, packageNames = packageNames)
+        }
+    }
+
+    fun hideSelectedApps(label: String, packageNames: List<String>) {
+        viewModelScope.launch {
+            addHidePackagesAppSetting(label = label, packageNames = packageNames)
+        }
+    }
+
+    private suspend fun addHidePackagesAppSetting(label: String, packageNames: List<String>) {
+        if (packageNames.isEmpty()) return
+
+        _addAppSettingsResult.update {
+            addAppSettingUseCase(
+                appSetting = AppSetting(
+                    enabled = true,
+                    settingType = SettingType.PACKAGE,
+                    componentName = componentName,
+                    label = label,
+                    key = packageNames.joinToString(separator = ","),
+                    valueOnLaunch = "hidden",
+                    valueOnRevert = "visible",
+                ),
+            )
+        }
+    }
+
+    private fun hideableApps(launcherApps: List<LauncherAppsActivityInfo>): List<LauncherAppsActivityInfo> = launcherApps.asSequence()
+        .filterNot { it.isSystem }
+        .filter { it.packageName != context.packageName && it.packageName != selectedPackageName }
+        .distinctBy { it.packageName }
+        .sortedBy { it.activityLabel.lowercase() }
+        .toList()
 
     fun getPinShorcut() {
         viewModelScope.launch {

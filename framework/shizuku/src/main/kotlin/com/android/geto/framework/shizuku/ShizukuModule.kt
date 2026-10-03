@@ -15,21 +15,20 @@
  *   limitations under the License.
  *
  */
+package com.android.geto.framework.shizuku
 
-syntax = "proto3";
+import com.android.geto.domain.framework.ShizukuWrapper
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
-import "com/android/geto/data/datastore/proto/theme.proto";
-import "com/android/geto/data/datastore/proto/sort_launcher_apps_activity_info.proto";
-import "com/android/geto/data/datastore/proto/sort_order_launcher_apps_activity_info.proto";
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface ShizukuModule {
 
-option java_package = "com.android.geto.data.datastore.proto";
-option java_multiple_files = true;
-
-message UserPreferences {
-  ThemeProto theme = 1;
-  bool dynamicTheme = 2;
-  SortLauncherAppsActivityInfoProto sortLauncherAppsActivityInfo = 3;
-  SortOrderLauncherAppsActivityInfoProto sortOrderLauncherAppsActivityInfo = 4;
-  bool showSystem = 5;
+    @Binds
+    @Singleton
+    fun shizukuWrapper(impl: DefaultShizukuWrapper): ShizukuWrapper
 }
-
