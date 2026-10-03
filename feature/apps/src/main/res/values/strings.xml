@@ -26,4 +26,11 @@
     <string name="descending">Descending</string>
     <string name="show_system">Show System</string>
     <string name="show_system_applications">Show system applications</string>
+    <string name="show_hidden">Show Hidden</string>
+    <string name="show_hidden_applications">Show hidden applications</string>
+    <string name="hide_app">Hide app</string>
+    <string name="unhide_app">Unhide app</string>
+    <string name="more_options">More options</string>
+    <string name="hide_all_apps">Hide all apps</string>
+    <string name="show_all_apps">Show all apps</string>
 </resources>
