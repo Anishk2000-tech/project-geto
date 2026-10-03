@@ -15,22 +15,20 @@
  *   limitations under the License.
  *
  */
-package com.android.geto.domain.model
+package com.android.geto.framework.shizuku
 
-data class AppSetting(
-    val id: Int = 0,
-    val enabled: Boolean,
-    val settingType: SettingType,
-    val componentName: String,
-    val label: String,
-    val key: String,
-    val valueOnLaunch: String,
-    val valueOnRevert: String,
-)
+import com.android.geto.domain.framework.ShizukuWrapper
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
-enum class SettingType {
-    SYSTEM,
-    SECURE,
-    GLOBAL,
-    PACKAGE,
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface ShizukuModule {
+
+    @Binds
+    @Singleton
+    fun shizukuWrapper(impl: DefaultShizukuWrapper): ShizukuWrapper
 }

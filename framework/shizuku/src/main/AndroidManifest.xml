@@ -15,12 +15,19 @@
   ~   limitations under the License.
   ~
   -->
-<resources>
-    <string name="add">Add</string>
-    <string name="update">Update</string>
-    <string name="cancel">Cancel</string>
-    <string name="system">System</string>
-    <string name="secure">Secure</string>
-    <string name="global">Global</string>
-    <string name="package_type">Package</string>
-</resources>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <application>
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:ignore="ExportedContentProvider" />
+    </application>
+</manifest>

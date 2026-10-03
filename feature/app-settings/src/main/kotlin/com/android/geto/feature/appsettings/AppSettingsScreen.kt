@@ -75,11 +75,13 @@ import com.android.geto.domain.model.AppSetting
 import com.android.geto.domain.model.AppSettingTemplate
 import com.android.geto.domain.model.AppSettingsResult
 import com.android.geto.domain.model.GetPinShortcutResult
+import com.android.geto.domain.model.LauncherAppsActivityInfo
 import com.android.geto.domain.model.RequestPinShortcutResult
 import com.android.geto.domain.model.SecureSetting
 import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.model.UpdatePinShortcutResult
 import com.android.geto.feature.appsettings.dialog.AppSettingDialog
+import com.android.geto.feature.appsettings.dialog.HideAppsDialog
 import com.android.geto.feature.appsettings.dialog.RequestPinShortcutDialog
 import com.android.geto.feature.appsettings.dialog.TemplateDialog
 import com.android.geto.feature.appsettings.dialog.UpdatePinShortcutDialog
@@ -117,6 +119,8 @@ internal fun AppSettingsRoute(
 
     val appSettingTemplates by viewModel.appSettingTemplates.collectAsStateWithLifecycle()
 
+    val installedApps by viewModel.installedApps.collectAsStateWithLifecycle()
+
     val getPinShortcutResult by viewModel.getPinShortcutResult.collectAsStateWithLifecycle()
 
     val updatePinShortcutResult by viewModel.updatePinShortcutResult.collectAsStateWithLifecycle()
@@ -132,12 +136,15 @@ internal fun AppSettingsRoute(
         revertAppSettingsResult = revertAppSettingsResult,
         requestPinShortcutResult = requestPinShortcutResult,
         appSettingTemplates = appSettingTemplates,
+        installedApps = installedApps,
         updatePinShortcutResult = updatePinShortcutResult,
         onApplyAppSettings = viewModel::applyAppSettings,
         onRevertAppSettings = viewModel::revertAppSettings,
         onCheckAppSetting = viewModel::checkAppSetting,
         onDeleteAppSetting = viewModel::deleteAppSetting,
         onAddAppSetting = viewModel::addAppSetting,
+        onHideAllApps = viewModel::hideAllApps,
+        onHideSelectedApps = viewModel::hideSelectedApps,
         onRequestPinShortcut = viewModel::requestPinShortcut,
         onGetSecureSettingsByName = viewModel::getSecureSettingsByName,
         onResetApplyAppSettingsResult = viewModel::resetApplyAppSettingsResult,
@@ -166,6 +173,7 @@ internal fun AppSettingsScreen(
     revertAppSettingsResult: AppSettingsResult?,
     requestPinShortcutResult: RequestPinShortcutResult?,
     appSettingTemplates: List<AppSettingTemplate>,
+    installedApps: List<LauncherAppsActivityInfo>,
     getPinShortcutResult: GetPinShortcutResult?,
     updatePinShortcutResult: UpdatePinShortcutResult?,
     onApplyAppSettings: () -> Unit,
@@ -173,6 +181,8 @@ internal fun AppSettingsScreen(
     onCheckAppSetting: (appSetting: AppSetting) -> Unit,
     onDeleteAppSetting: (appSetting: AppSetting) -> Unit,
     onAddAppSetting: (AppSetting) -> Unit,
+    onHideAllApps: (label: String) -> Unit,
+    onHideSelectedApps: (label: String, packageNames: List<String>) -> Unit,
     onRequestPinShortcut: (
         icon: ByteArray?,
         shortLabel: String,
@@ -197,9 +207,15 @@ internal fun AppSettingsScreen(
 
     var showTemplateDialog by remember { mutableStateOf(false) }
 
+    var showHideAppsDialog by remember { mutableStateOf(false) }
+
     var showWriteSecureSettingsDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val hideAllAppsLabel = stringResource(id = R.string.hide_all_apps)
+
+    val hideSelectedAppsLabel = stringResource(id = R.string.hide_selected_apps)
 
     AppSettingsLaunchedEffects(
         appSettingsRouteData = appSettingsRouteData,
@@ -291,8 +307,26 @@ internal fun AppSettingsScreen(
             appSettingTemplates = appSettingTemplates,
             componentName = appSettingsRouteData.componentName,
             onAddAppSetting = onAddAppSetting,
+            onHideAllApps = {
+                onHideAllApps(hideAllAppsLabel)
+            },
+            onHideSelectedApps = {
+                showHideAppsDialog = true
+            },
             onDismissRequest = {
                 showTemplateDialog = false
+            },
+        )
+    }
+
+    if (showHideAppsDialog) {
+        HideAppsDialog(
+            apps = installedApps,
+            onAddSelectedApps = { packageNames ->
+                onHideSelectedApps(hideSelectedAppsLabel, packageNames)
+            },
+            onDismissRequest = {
+                showHideAppsDialog = false
             },
         )
     }
@@ -803,4 +837,5 @@ internal fun SettingType.getSettingTypeTitle() = when (this) {
     SettingType.SYSTEM -> stringResource(commonR.string.system)
     SettingType.SECURE -> stringResource(commonR.string.secure)
     SettingType.GLOBAL -> stringResource(commonR.string.global)
+    SettingType.PACKAGE -> stringResource(commonR.string.package_type)
 }

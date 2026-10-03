@@ -15,22 +15,20 @@
  *   limitations under the License.
  *
  */
-package com.android.geto.domain.model
 
-data class AppSetting(
-    val id: Int = 0,
-    val enabled: Boolean,
-    val settingType: SettingType,
-    val componentName: String,
-    val label: String,
-    val key: String,
-    val valueOnLaunch: String,
-    val valueOnRevert: String,
-)
+plugins {
+    alias(libs.plugins.com.android.geto.library)
+    alias(libs.plugins.com.android.geto.hilt)
+}
 
-enum class SettingType {
-    SYSTEM,
-    SECURE,
-    GLOBAL,
-    PACKAGE,
+android {
+    namespace = "com.android.geto.framework.shizuku"
+}
+
+dependencies {
+    implementation(projects.domain.common)
+    implementation(projects.domain.framework)
+
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 }

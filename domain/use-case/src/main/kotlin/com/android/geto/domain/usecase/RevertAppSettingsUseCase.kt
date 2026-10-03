@@ -20,7 +20,10 @@ package com.android.geto.domain.usecase
 import com.android.geto.domain.common.dispatcher.Dispatcher
 import com.android.geto.domain.common.dispatcher.GetoDispatchers
 import com.android.geto.domain.framework.SecureSettingsWrapper
+import com.android.geto.domain.framework.ShizukuWrapper
+import com.android.geto.domain.model.AppSetting
 import com.android.geto.domain.model.AppSettingsResult
+import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.repository.AppSettingsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -29,6 +32,7 @@ import javax.inject.Inject
 class RevertAppSettingsUseCase @Inject constructor(
     private val appSettingsRepository: AppSettingsRepository,
     private val secureSettingsWrapper: SecureSettingsWrapper,
+    private val shizukuWrapper: ShizukuWrapper,
     @param:Dispatcher(GetoDispatchers.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) {
     suspend operator fun invoke(componentName: String): AppSettingsResult = withContext(defaultDispatcher) {
@@ -40,14 +44,7 @@ class RevertAppSettingsUseCase @Inject constructor(
         if (appSettings.all { !it.enabled }) return@withContext AppSettingsResult.DisabledAppSettings
 
         try {
-            if (appSettings.all {
-                    secureSettingsWrapper.canWriteSecureSettings(
-                        settingType = it.settingType,
-                        key = it.key,
-                        value = it.valueOnRevert,
-                    )
-                }
-            ) {
+            if (appSettings.all { revertAppSetting(appSetting = it) }) {
                 AppSettingsResult.Success
             } else {
                 AppSettingsResult.Failure
@@ -57,5 +54,18 @@ class RevertAppSettingsUseCase @Inject constructor(
         } catch (_: IllegalArgumentException) {
             AppSettingsResult.InvalidValues
         }
+    }
+
+    private suspend fun revertAppSetting(appSetting: AppSetting): Boolean = when (appSetting.settingType) {
+        SettingType.PACKAGE -> shizukuWrapper.setPackagesHidden(
+            packageNames = appSetting.key.split(",").filter { it.isNotBlank() },
+            hidden = false,
+        )
+
+        else -> secureSettingsWrapper.canWriteSecureSettings(
+            settingType = appSetting.settingType,
+            key = appSetting.key,
+            value = appSetting.valueOnRevert,
+        )
     }
 }
