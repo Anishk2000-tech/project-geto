@@ -52,24 +52,4 @@ class DefaultUserDataRepository @Inject constructor(
     override suspend fun updateShowSystem(showSystem: Boolean) {
         userPreferencesDataSource.updateShowSystem(showSystem = showSystem)
     }
-
-    override suspend fun updateShowHidden(showHidden: Boolean) {
-        userPreferencesDataSource.updateShowHidden(showHidden = showHidden)
-    }
-
-    override suspend fun hideApp(packageName: String) {
-        userPreferencesDataSource.hideApp(packageName = packageName)
-    }
-
-    override suspend fun unhideApp(packageName: String) {
-        userPreferencesDataSource.unhideApp(packageName = packageName)
-    }
-
-    override suspend fun hideApps(packageNames: Collection<String>) {
-        userPreferencesDataSource.hideApps(packageNames = packageNames)
-    }
-
-    override suspend fun unhideAllApps() {
-        userPreferencesDataSource.unhideAllApps()
-    }
 }

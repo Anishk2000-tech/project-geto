@@ -41,8 +41,6 @@ class UserPreferencesDataSource @Inject constructor(private val userPreferences:
             sortLauncherAppsActivityInfo = it.sortLauncherAppsActivityInfo.asSortLauncherAppsActivityInfo(),
             sortOrderLauncherAppsActivityInfo = it.sortOrderLauncherAppsActivityInfo.asSortOrderLauncherAppsActivityInfo(),
             showSystem = it.showSystem,
-            hiddenApps = it.hiddenAppsList.toSet(),
-            showHidden = it.showHidden,
         )
     }
 
@@ -82,61 +80,6 @@ class UserPreferencesDataSource @Inject constructor(private val userPreferences:
         userPreferences.updateData {
             it.copy {
                 this.showSystem = showSystem
-            }
-        }
-    }
-
-    suspend fun updateShowHidden(showHidden: Boolean) {
-        userPreferences.updateData {
-            it.copy {
-                this.showHidden = showHidden
-            }
-        }
-    }
-
-    suspend fun hideApp(packageName: String) {
-        userPreferences.updateData { preferences ->
-            val updatedHiddenApps = preferences.hiddenAppsList.toMutableSet().apply {
-                add(packageName)
-            }
-
-            preferences.copy {
-                hiddenApps.clear()
-                hiddenApps.addAll(updatedHiddenApps)
-            }
-        }
-    }
-
-    suspend fun unhideApp(packageName: String) {
-        userPreferences.updateData { preferences ->
-            val updatedHiddenApps = preferences.hiddenAppsList.toMutableSet().apply {
-                remove(packageName)
-            }
-
-            preferences.copy {
-                hiddenApps.clear()
-                hiddenApps.addAll(updatedHiddenApps)
-            }
-        }
-    }
-
-    suspend fun hideApps(packageNames: Collection<String>) {
-        userPreferences.updateData { preferences ->
-            val updatedHiddenApps = preferences.hiddenAppsList.toMutableSet().apply {
-                addAll(packageNames)
-            }
-
-            preferences.copy {
-                hiddenApps.clear()
-                hiddenApps.addAll(updatedHiddenApps)
-            }
-        }
-    }
-
-    suspend fun unhideAllApps() {
-        userPreferences.updateData {
-            it.copy {
-                hiddenApps.clear()
             }
         }
     }

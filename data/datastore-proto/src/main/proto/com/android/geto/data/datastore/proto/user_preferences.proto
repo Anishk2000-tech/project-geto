@@ -31,7 +31,5 @@ message UserPreferences {
   SortLauncherAppsActivityInfoProto sortLauncherAppsActivityInfo = 3;
   SortOrderLauncherAppsActivityInfoProto sortOrderLauncherAppsActivityInfo = 4;
   bool showSystem = 5;
-  repeated string hiddenApps = 6;
-  bool showHidden = 7;
 }
 

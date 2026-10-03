@@ -57,16 +57,10 @@ class GetLauncherAppsActivityInfosUseCase @Inject constructor(
             }
         }
 
-        val systemFilteredLauncherAppsActivityInfos = if (userData.showSystem) {
+        val filteredLauncherAppsActivityInfos = if (userData.showSystem) {
             launcherAppsActivityInfos
         } else {
             launcherAppsActivityInfos.filterNot { it.isSystem }
-        }
-
-        val filteredLauncherAppsActivityInfos = if (userData.showHidden) {
-            systemFilteredLauncherAppsActivityInfos
-        } else {
-            systemFilteredLauncherAppsActivityInfos.filterNot { it.packageName in userData.hiddenApps }
         }
 
         val sortedLauncherAppsActivityInfos = filteredLauncherAppsActivityInfos.sortedWith(

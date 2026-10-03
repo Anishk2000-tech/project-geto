@@ -21,7 +21,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,15 +30,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
@@ -91,11 +87,6 @@ internal fun AppsRoute(
         onUpdateSortLauncherAppsActivityInfo = viewModel::updateSortLauncherAppsActivityInfo,
         onUpdateSortOrderLauncherAppsActivityInfo = viewModel::updateSortOrderLauncherAppsActivityInfo,
         onUpdateShowSystem = viewModel::updateShowSystem,
-        onUpdateShowHidden = viewModel::updateShowHidden,
-        onHideApp = viewModel::hideApp,
-        onUnhideApp = viewModel::unhideApp,
-        onHideApps = viewModel::hideApps,
-        onUnhideAllApps = viewModel::unhideAllApps,
     )
 }
 
@@ -113,11 +104,6 @@ internal fun AppsScreen(
     onUpdateSortLauncherAppsActivityInfo: (SortLauncherAppsActivityInfo) -> Unit,
     onUpdateSortOrderLauncherAppsActivityInfo: (SortOrderLauncherAppsActivityInfo) -> Unit,
     onUpdateShowSystem: (Boolean) -> Unit,
-    onUpdateShowHidden: (Boolean) -> Unit,
-    onHideApp: (String) -> Unit,
-    onUnhideApp: (String) -> Unit,
-    onHideApps: (Collection<String>) -> Unit,
-    onUnhideAllApps: () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when (appsUiState) {
@@ -134,11 +120,6 @@ internal fun AppsScreen(
                     onUpdateSortLauncherAppsActivityInfo = onUpdateSortLauncherAppsActivityInfo,
                     onUpdateSortOrderLauncherAppsActivityInfo = onUpdateSortOrderLauncherAppsActivityInfo,
                     onUpdateShowSystem = onUpdateShowSystem,
-                    onUpdateShowHidden = onUpdateShowHidden,
-                    onHideApp = onHideApp,
-                    onUnhideApp = onUnhideApp,
-                    onHideApps = onHideApps,
-                    onUnhideAllApps = onUnhideAllApps,
                 )
             }
         }
@@ -158,11 +139,6 @@ private fun Success(
     onUpdateSortLauncherAppsActivityInfo: (SortLauncherAppsActivityInfo) -> Unit,
     onUpdateSortOrderLauncherAppsActivityInfo: (SortOrderLauncherAppsActivityInfo) -> Unit,
     onUpdateShowSystem: (Boolean) -> Unit,
-    onUpdateShowHidden: (Boolean) -> Unit,
-    onHideApp: (String) -> Unit,
-    onUnhideApp: (String) -> Unit,
-    onHideApps: (Collection<String>) -> Unit,
-    onUnhideAllApps: () -> Unit,
 ) {
     val searchBarState = rememberSearchBarState()
 
@@ -171,8 +147,6 @@ private fun Success(
     val scope = rememberCoroutineScope()
 
     var showSortLauncherAppsActivityInfoDialog by remember { mutableStateOf(false) }
-
-    var showMoreOptionsMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = textFieldState) {
         snapshotFlow { textFieldState.text }.debounce(500.milliseconds)
@@ -199,54 +173,15 @@ private fun Success(
                         )
                     },
                     trailingIcon = {
-                        Row {
-                            IconButton(
-                                onClick = {
-                                    showSortLauncherAppsActivityInfoDialog = true
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = GetoIcons.Sort,
-                                    contentDescription = null,
-                                )
-                            }
-
-                            Box {
-                                IconButton(
-                                    onClick = {
-                                        showMoreOptionsMenu = true
-                                    },
-                                ) {
-                                    Icon(
-                                        imageVector = GetoIcons.MoreVert,
-                                        contentDescription = stringResource(R.string.more_options),
-                                    )
-                                }
-
-                                AppsMoreOptionsMenu(
-                                    expanded = showMoreOptionsMenu,
-                                    showHidden = launcherAppsActivityInfoData.userData.showHidden,
-                                    onDismissRequest = {
-                                        showMoreOptionsMenu = false
-                                    },
-                                    onHideAllApps = {
-                                        onHideApps(
-                                            launcherAppsActivityInfoData.launcherAppsActivityInfos.map {
-                                                it.packageName
-                                            },
-                                        )
-                                        showMoreOptionsMenu = false
-                                    },
-                                    onShowAllApps = {
-                                        onUnhideAllApps()
-                                        showMoreOptionsMenu = false
-                                    },
-                                    onUpdateShowHidden = { showHidden ->
-                                        onUpdateShowHidden(showHidden)
-                                        showMoreOptionsMenu = false
-                                    },
-                                )
-                            }
+                        IconButton(
+                            onClick = {
+                                showSortLauncherAppsActivityInfoDialog = true
+                            },
+                        ) {
+                            Icon(
+                                imageVector = GetoIcons.Sort,
+                                contentDescription = null,
+                            )
                         }
                     },
                     onSearch = {
@@ -268,10 +203,7 @@ private fun Success(
             items(items = launcherAppsActivityInfoData.launcherAppsActivityInfos) { launcherAppsActivityInfo ->
                 AppItem(
                     launcherAppsActivityInfo = launcherAppsActivityInfo,
-                    hidden = launcherAppsActivityInfo.packageName in launcherAppsActivityInfoData.userData.hiddenApps,
                     onClickApp = onClickApp,
-                    onHideApp = onHideApp,
-                    onUnhideApp = onUnhideApp,
                 )
             }
         }
@@ -296,13 +228,10 @@ private fun Success(
 private fun AppItem(
     modifier: Modifier = Modifier,
     launcherAppsActivityInfo: LauncherAppsActivityInfo,
-    hidden: Boolean,
     onClickApp: (
         componentName: String,
         activityLabel: String,
     ) -> Unit,
-    onHideApp: (String) -> Unit,
-    onUnhideApp: (String) -> Unit,
 ) {
     ListItem(
         modifier = modifier
@@ -329,87 +258,5 @@ private fun AppItem(
                 contentDescription = null,
             )
         },
-        trailingContent = {
-            IconButton(
-                onClick = {
-                    if (hidden) {
-                        onUnhideApp(launcherAppsActivityInfo.packageName)
-                    } else {
-                        onHideApp(launcherAppsActivityInfo.packageName)
-                    }
-                },
-            ) {
-                Icon(
-                    imageVector = if (hidden) {
-                        GetoIcons.Visibility
-                    } else {
-                        GetoIcons.VisibilityOff
-                    },
-                    contentDescription = if (hidden) {
-                        stringResource(R.string.unhide_app)
-                    } else {
-                        stringResource(R.string.hide_app)
-                    },
-                )
-            }
-        },
     )
-}
-
-@Composable
-private fun AppsMoreOptionsMenu(
-    modifier: Modifier = Modifier,
-    expanded: Boolean,
-    showHidden: Boolean,
-    onDismissRequest: () -> Unit,
-    onHideAllApps: () -> Unit,
-    onShowAllApps: () -> Unit,
-    onUpdateShowHidden: (Boolean) -> Unit,
-) {
-    DropdownMenu(
-        modifier = modifier,
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-    ) {
-        DropdownMenuItem(
-            text = {
-                Text(text = stringResource(R.string.hide_all_apps))
-            },
-            onClick = onHideAllApps,
-            leadingIcon = {
-                Icon(
-                    imageVector = GetoIcons.VisibilityOff,
-                    contentDescription = null,
-                )
-            },
-        )
-
-        DropdownMenuItem(
-            text = {
-                Text(text = stringResource(R.string.show_all_apps))
-            },
-            onClick = onShowAllApps,
-            leadingIcon = {
-                Icon(
-                    imageVector = GetoIcons.Visibility,
-                    contentDescription = null,
-                )
-            },
-        )
-
-        DropdownMenuItem(
-            text = {
-                Text(text = stringResource(R.string.show_hidden))
-            },
-            onClick = {
-                onUpdateShowHidden(!showHidden)
-            },
-            trailingIcon = {
-                Switch(
-                    checked = showHidden,
-                    onCheckedChange = null,
-                )
-            },
-        )
-    }
 }
